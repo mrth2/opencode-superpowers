@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // opencode-superpowers — installer entrypoint for `npx opencode-superpowers`.
 //
-// This thin wrapper just shells out to scripts/install-opencode.sh, which
-// handles symlinking the agent markdown files into ~/.config/opencode/agents/.
+// This thin wrapper shells out to scripts/install-opencode.sh, which installs
+// the bundled OpenCode agents and vendored Superpowers skills into the user's
+// OpenCode config directories. Packaged npx installs default to copy mode so
+// installed files do not depend on npm cache paths remaining available.
 //
 // Usage:
-//   npx opencode-superpowers              # install (skip existing non-symlinks)
+//   npx opencode-superpowers              # install agents and skills
 //   npx opencode-superpowers --force      # overwrite existing entries
 //   npx opencode-superpowers --dry-run    # show what would happen
-//   npx opencode-superpowers --uninstall  # remove symlinks created by this script
+//   npx opencode-superpowers --uninstall  # remove managed entries
 
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");

@@ -1,19 +1,26 @@
 {
   "name": "opencode-superpowers",
   "version": "0.1.0",
-  "description": "Superpowers agent pack for OpenCode — primary orchestrator + spec/audit/plan/implement subagents that drive the upstream Superpowers skill workflow. Designed for OpenCode users on a GitHub Copilot subscription who already know Superpowers.",
+  "description": "Self-contained Superpowers agent pack for OpenCode — primary orchestrator + spec/audit/plan/implement subagents with the required workflow skills bundled.",
   "bin": {
     "opencode-superpowers": "bin/opencode-superpowers.js"
   },
   "files": [
     "agents",
+    "skills",
     "scripts",
     "bin",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "install-agents": "bash scripts/install-opencode.sh"
+    "install-agents": "bash scripts/install-opencode.sh",
+    "install-opencode": "bash scripts/install-opencode.sh",
+    "verify:skills": "node scripts/verify-vendored-skills.mjs",
+    "sync:skills": "node scripts/sync-superpowers-skills.mjs",
+    "test:sync": "node --test tests/sync-superpowers-skills.test.mjs",
+    "test:install": "node --test tests/install-opencode.test.mjs",
+    "test": "npm run verify:skills && npm run test:sync && npm run test:install"
   },
   "keywords": [
     "opencode",

@@ -1,18 +1,16 @@
 # opencode-superpowers
 
-> **OpenCode-only** agent pack that wires the [Superpowers](https://github.com/obra/superpowers) workflow into [OpenCode](https://opencode.ai) as a primary orchestrator + four specialized subagents.
+> **OpenCode-only** agent pack that bundles the supported [Superpowers](https://github.com/obra/superpowers) workflow skills with a primary orchestrator and four specialized subagents.
 
 Built for people who:
 
 - use **OpenCode** as their CLI coding agent,
-- pay for a **GitHub Copilot subscription** (the agents are pre-routed to `github-copilot/*` models),
-- and already know what **Superpowers** is and why they want it.
-
-If you don't match all three, this repo probably isn't for you — go look at the upstream [obra/superpowers](https://github.com/obra/superpowers) first.
+- pay for a **GitHub Copilot subscription** or have compatible model IDs configured,
+- and want the Superpowers workflow available through OpenCode agents with one install command.
 
 ## What's in the pack
 
-Five OpenCode agents (in `agents/`):
+Five OpenCode agents are installed from `agents/`:
 
 | Agent | Mode | Purpose |
 | --- | --- | --- |
@@ -22,61 +20,50 @@ Five OpenCode agents (in `agents/`):
 | `superpowers-plan-writer` | subagent | Turns an approved spec into an executable implementation plan. |
 | `superpowers-implementer` | subagent | Executes the approved plan task-by-task with verification gates. |
 
-All five are **routed to `github-copilot/*` models** by default — that's the "Copilot subscription" assumption. Edit the `model:` field in each agent file if you want to use a different provider.
+The installer also installs the supported vendored skill set from `skills/`:
 
-## What's not in this repo
+- `using-superpowers`
+- `brainstorming`
+- `writing-plans`
+- `subagent-driven-development`
+- `executing-plans`
+- `verification-before-completion`
 
-This pack ships **agents only**. It deliberately does **not** include:
+All five agents are routed to `github-copilot/*` models by default. Edit the `model:` field in each agent file if you want to use a different provider.
 
-- the upstream Superpowers **skills** (e.g. `brainstorming`, `writing-plans`, `verification-before-completion`),
-- the Superpowers plugin runtime, hooks, provider routing, or fallback engines.
+## What is not bundled
 
-Those are owned by [obra/superpowers](https://github.com/obra/superpowers). The agents in this repo expect those skills to already be available to OpenCode at runtime.
+This repository vendors only the minimum upstream Superpowers skills required by the agents listed above. It does not bundle the full upstream plugin runtime, hooks, provider routing, fallback engines, or unrelated skills from `obra/superpowers`.
+
+The vendored snapshot is pinned in `skills/superpowers.lock.json` with the upstream commit SHA and per-file SHA-256 checksums.
 
 ## Prerequisites
 
 1. **OpenCode** installed and working.
-2. **Superpowers** installed as an OpenCode plugin. The recommended way:
+2. A **GitHub Copilot subscription** configured as a provider in OpenCode, unless you edit the agent `model:` fields to use another provider.
+3. **Node.js 16 or newer** for the `npx` entrypoint and verification scripts.
 
-   ```sh
-   opencode plugin add superpowers@git+https://github.com/obra/superpowers.git
-   ```
-
-   Or add it manually to `~/.config/opencode/opencode.json`:
-
-   ```json
-   {
-     "plugin": [
-       "superpowers@git+https://github.com/obra/superpowers.git"
-     ]
-   }
-   ```
-
-3. A **GitHub Copilot subscription** configured as a provider in OpenCode (so the `github-copilot/*` model IDs the agents reference actually resolve).
-
-The installer will warn you if it can't detect Superpowers at install time.
+You do not need to install `obra/superpowers` separately for this agent pack.
 
 ## Install
 
-Pick one of the following. All three end up in the same place: symlinks under `~/.config/opencode/agents/`.
-
-### Option A — `npx` (recommended, no clone)
+### Option A - `npx` recommended for normal users
 
 ```sh
 npx opencode-superpowers
 ```
 
-> Note: this only works after the package is published to npm. Until then, use Option B or C.
+Packaged installs use copy mode automatically so installed files do not depend on npm cache paths remaining available.
 
 Common flags:
 
 ```sh
 npx opencode-superpowers --dry-run     # preview only
-npx opencode-superpowers --force       # overwrite existing entries
-npx opencode-superpowers --uninstall   # remove the symlinks this tool created
+npx opencode-superpowers --force       # overwrite conflicting unmanaged entries
+npx opencode-superpowers --uninstall   # remove entries recorded in the local manifest
 ```
 
-### Option B — git clone + script
+### Option B - git clone recommended for local editing
 
 ```sh
 git clone https://github.com/mrth2/opencode-superpowers ~/Code/opencode-superpowers
@@ -84,16 +71,21 @@ cd ~/Code/opencode-superpowers
 ./scripts/install-opencode.sh
 ```
 
-This is the recommended path if you want `git pull` to update the agents in place (the installer creates symlinks, so updates flow automatically).
+Clone installs use symlink mode automatically. Pulling the repo updates linked agent and skill content in place, and re-running the installer reconciles added or removed managed entries.
 
-### Option C — one-liner over curl
+### Install modes
+
+The installer chooses the mode automatically:
+
+- **Symlink mode** when the source has a `.git` directory or gitfile.
+- **Copy mode** when the source looks like a packaged install.
+
+For maintenance testing, the mode can be forced:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mrth2/opencode-superpowers/main/scripts/install-opencode.sh \
-  | REPO_URL=https://github.com/mrth2/opencode-superpowers bash
+./scripts/install-opencode.sh --mode symlink
+./scripts/install-opencode.sh --mode copy
 ```
-
-> The current installer assumes it's being run from inside a clone of this repo. The curl path requires you to clone first; prefer Option A or B.
 
 ### Environment variables
 
@@ -101,13 +93,13 @@ The installer respects:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `OPENCODE_AGENTS_DIR` | `~/.config/opencode/agents` | Where agent symlinks are written. |
-| `OPENCODE_SKILLS_DIR` | `~/.config/opencode/skills` | Used only to detect a legacy filesystem-based Superpowers install. |
-| `OPENCODE_CONFIG_FILE` | `~/.config/opencode/opencode.json` | Used to detect Superpowers as an OpenCode plugin. |
+| `OPENCODE_AGENTS_DIR` | `~/.config/opencode/agents` | Where agent files are installed. |
+| `OPENCODE_SKILLS_DIR` | `~/.config/opencode/skills` | Where skill directories are installed. |
+| `OPENCODE_SUPERPOWERS_MANIFEST` | `~/.config/opencode/opencode-superpowers-install.json` | Local manifest used for safe update and uninstall. |
 
 ## Verify
 
-After installing, restart OpenCode. You should see the five agents available:
+After installing, restart OpenCode. You should see the five agents and six skills:
 
 ```sh
 ls ~/.config/opencode/agents/
@@ -116,20 +108,32 @@ ls ~/.config/opencode/agents/
 # superpowers-spec-auditor.md
 # superpowers-spec-writer.md
 # superpowers.md
+
+ls ~/.config/opencode/skills/
+# brainstorming
+# executing-plans
+# subagent-driven-development
+# using-superpowers
+# verification-before-completion
+# writing-plans
 ```
 
-In OpenCode, switch to the `superpowers` agent. It will:
+You can verify the vendored snapshot in a clone with:
 
-1. Load the `using-superpowers` skill at session start.
-2. Drive you through brainstorm → spec → audit → plan → implement.
-3. Gate every phase transition with an explicit confirmation question.
+```sh
+npm run verify:skills
+```
 
-If the upstream Superpowers skills aren't installed, the agent will pause and tell you.
+Expected output starts with:
+
+```text
+ok vendored skills verified:
+```
 
 ## Updating
 
-- Installed via `git clone`: `git pull` inside the clone. Symlinks pick up the new content automatically.
-- Installed via `npx`: re-run `npx opencode-superpowers@latest`.
+- Installed via `git clone`: run `git pull`, then `./scripts/install-opencode.sh` to refresh the manifest and reconcile added or removed managed entries.
+- Installed via `npx`: run `npx opencode-superpowers@latest`.
 
 ## Uninstall
 
@@ -141,7 +145,20 @@ If the upstream Superpowers skills aren't installed, the agent will pause and te
 npx opencode-superpowers --uninstall
 ```
 
-This only removes symlinks that point back into this repo's `agents/` directory. Files you put there manually are left alone.
+Uninstall reads `~/.config/opencode/opencode-superpowers-install.json` and removes only entries recorded as managed by this project. Manually created sibling agents, skills, and unrelated OpenCode configuration files are left untouched.
+
+## Syncing vendored skills from upstream
+
+Maintainers refresh the vendored snapshot through the sync script:
+
+```sh
+rm -rf /tmp/opencode-superpowers-upstream
+git clone --depth 1 https://github.com/obra/superpowers.git /tmp/opencode-superpowers-upstream
+node scripts/sync-superpowers-skills.mjs --upstream /tmp/opencode-superpowers-upstream
+npm test
+```
+
+Maintainers can run the sync script manually when refreshing the vendored snapshot; this repository does not currently ship a weekly GitHub Actions sync workflow.
 
 ## Customizing
 
@@ -151,10 +168,10 @@ The agents are plain markdown with YAML frontmatter. To change the model, edit t
 model: anthropic/claude-sonnet-4-5
 ```
 
-Because the install is symlink-based, your edits in this repo are picked up immediately by OpenCode.
+Clone installs use symlinks, so local edits in this repo are picked up immediately by OpenCode after restart. Packaged installs use copies, so rerun the installer after editing a package copy.
 
 ## License
 
 [MIT](./LICENSE) © mrth2 and contributors.
 
-The upstream [Superpowers](https://github.com/obra/superpowers) project is licensed separately by its authors; this repo neither vendors nor redistributes it.
+The upstream [Superpowers](https://github.com/obra/superpowers) project is licensed separately by its authors. Vendored skill files retain their upstream notices and are pinned in `skills/superpowers.lock.json`.

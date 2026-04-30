@@ -1,0 +1,117 @@
+{
+  "upstream": {
+    "repository": "https://github.com/obra/superpowers.git",
+    "commit": "6efe32c9e2dd002d0c394e861e0529675d1ab32e",
+    "syncedAt": "2026-04-30T10:02:24.769Z"
+  },
+  "requiredSkills": [
+    "using-superpowers",
+    "brainstorming",
+    "writing-plans",
+    "subagent-driven-development",
+    "executing-plans",
+    "verification-before-completion"
+  ],
+  "files": [
+    {
+      "path": "skills/brainstorming/SKILL.md",
+      "sha256": "bba47904a7f6bbee3bf8a107ebbe84e65d392be683bbb898ded736b29e415f90",
+      "bytes": 10634
+    },
+    {
+      "path": "skills/brainstorming/scripts/frame-template.html",
+      "sha256": "fb22ba9d47f3b83b56e0a95d52a3c2727db03b0d4365078d92c850293a62457b",
+      "bytes": 7703
+    },
+    {
+      "path": "skills/brainstorming/scripts/helper.js",
+      "sha256": "e763d82f32b4ebb320be2f0d08449d3e5a0585778edf5c407c1fdab3f39976a5",
+      "bytes": 2707
+    },
+    {
+      "path": "skills/brainstorming/scripts/server.cjs",
+      "sha256": "ea81185f581897c67d4b417eeb9bc7a158c50e0932c73047054fe53efc2683ef",
+      "bytes": 11218
+    },
+    {
+      "path": "skills/brainstorming/scripts/start-server.sh",
+      "sha256": "3442a54b5ee5511637d27bf696e092b72f94c2324f40b5ba4410da4dd0c23bc8",
+      "bytes": 4606
+    },
+    {
+      "path": "skills/brainstorming/scripts/stop-server.sh",
+      "sha256": "f65b7634a27343eab2086bdb6c59ba78695685f471b5a577b08a8817f7c50600",
+      "bytes": 1314
+    },
+    {
+      "path": "skills/brainstorming/spec-document-reviewer-prompt.md",
+      "sha256": "12cb5ed58aef41b8da6fbb505547c71ca3f5658c83b66ca6e556c936308b3189",
+      "bytes": 1748
+    },
+    {
+      "path": "skills/brainstorming/visual-companion.md",
+      "sha256": "a2bc6fc47d0df1df981d02f707a16225b147f462e7059175ad2bc5e6dd29fcae",
+      "bytes": 12047
+    },
+    {
+      "path": "skills/executing-plans/SKILL.md",
+      "sha256": "a711f83fb762e2ea0fa151f598893da9911a408895c91cc7a7e0770dd59a27b3",
+      "bytes": 2459
+    },
+    {
+      "path": "skills/subagent-driven-development/SKILL.md",
+      "sha256": "081ad3869e55c80bf8f890b4768a90c0e8057daf94b1b6fadebfc85ea5b8304a",
+      "bytes": 12139
+    },
+    {
+      "path": "skills/subagent-driven-development/code-quality-reviewer-prompt.md",
+      "sha256": "06d1e7c2287e5a00bd1809bf39038abd5f413b4cf917c37d30f00c48f6293421",
+      "bytes": 1115
+    },
+    {
+      "path": "skills/subagent-driven-development/implementer-prompt.md",
+      "sha256": "a416193f881e5a712c988fffabfe1d5a97bffcd091eb95577c84fe2136588617",
+      "bytes": 4258
+    },
+    {
+      "path": "skills/subagent-driven-development/spec-reviewer-prompt.md",
+      "sha256": "631980e472eec5394de8b89b69d432e54fd3f7f523ecf9afa7eb4cda0c9b2baf",
+      "bytes": 1999
+    },
+    {
+      "path": "skills/using-superpowers/SKILL.md",
+      "sha256": "316e29381219adf0cac62190c67aeabf427d6e6e5f2735541d502b3d339be7aa",
+      "bytes": 5421
+    },
+    {
+      "path": "skills/using-superpowers/references/codex-tools.md",
+      "sha256": "9014e6746c9a6d3af9eeb9608f1ad637ee334e5a12d178747e3042937fc3da2b",
+      "bytes": 4070
+    },
+    {
+      "path": "skills/using-superpowers/references/copilot-tools.md",
+      "sha256": "5e0e9248e8bd965a28c8721bed24ddfa44a1ee66a89ee275da4a8260fe636e02",
+      "bytes": 2193
+    },
+    {
+      "path": "skills/using-superpowers/references/gemini-tools.md",
+      "sha256": "477239fd7b4868f016662831e0fe840557ce91217f057f742a41af57a53554de",
+      "bytes": 1494
+    },
+    {
+      "path": "skills/verification-before-completion/SKILL.md",
+      "sha256": "ea52d15aabaf72bc6b558efe2c126f161b53961090ddcd712000273bfe8c7b6c",
+      "bytes": 4201
+    },
+    {
+      "path": "skills/writing-plans/SKILL.md",
+      "sha256": "90056bad3d5f196fa7c9fec0ffe592e6d9c86bc983e406642a51d1a4198b7024",
+      "bytes": 6046
+    },
+    {
+      "path": "skills/writing-plans/plan-document-reviewer-prompt.md",
+      "sha256": "6fce2aa83c63715697e9dd86050c820716100b91efbd9f12bab8477ecc060256",
+      "bytes": 1714
+    }
+  ]
+}

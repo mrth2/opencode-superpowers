@@ -1,49 +1,57 @@
 #!/usr/bin/env bash
-# Install opencode-superpowers agents into OpenCode by symlink.
+# Install opencode-superpowers agents and bundled skills into OpenCode.
 #
-# OpenCode discovers agents from ~/.config/opencode/agents/*.md. This script
-# symlinks each agent from this repo into OpenCode so that `git pull` updates
-# them automatically.
-# The upstream Superpowers skills repo must be installed separately.
+# OpenCode discovers agents from ~/.config/opencode/agents/*.md and filesystem
+# skills from ~/.config/opencode/skills/<skill>/SKILL.md. This installer manages
+# both sets together and records a local manifest for safe updates and uninstall.
 #
 # Usage:
-#   ./scripts/install-opencode.sh           # install (skip existing non-symlinks)
-#   ./scripts/install-opencode.sh --force   # overwrite any existing entries
-#   ./scripts/install-opencode.sh --dry-run # show what would happen
-#   ./scripts/install-opencode.sh --uninstall # remove symlinks created by this script
+#   ./scripts/install-opencode.sh                  # install agents and skills
+#   ./scripts/install-opencode.sh --force          # overwrite conflicting entries
+#   ./scripts/install-opencode.sh --dry-run        # show planned changes only
+#   ./scripts/install-opencode.sh --uninstall      # remove managed entries
+#   ./scripts/install-opencode.sh --mode symlink   # force symlink mode
+#   ./scripts/install-opencode.sh --mode copy      # force copy mode
 
 set -euo pipefail
 
+PROJECT_ID="opencode-superpowers"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENTS_SRC="$REPO_ROOT/agents"
+SKILLS_SRC="$REPO_ROOT/skills"
+LOCK_FILE="$SKILLS_SRC/superpowers.lock.json"
 AGENTS_DEST="${OPENCODE_AGENTS_DIR:-$HOME/.config/opencode/agents}"
 SKILLS_DEST="${OPENCODE_SKILLS_DIR:-$HOME/.config/opencode/skills}"
-OPENCODE_CONFIG="${OPENCODE_CONFIG_FILE:-$HOME/.config/opencode/opencode.json}"
+MANIFEST="${OPENCODE_SUPERPOWERS_MANIFEST:-$HOME/.config/opencode/opencode-superpowers-install.json}"
 
 FORCE=0
 DRY_RUN=0
 UNINSTALL=0
+MODE="auto"
 
-for arg in "$@"; do
-  case "$arg" in
-    --force) FORCE=1 ;;
-    --dry-run) DRY_RUN=1 ;;
-    --uninstall) UNINSTALL=1 ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force) FORCE=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --uninstall) UNINSTALL=1; shift ;;
+    --mode)
+      MODE="${2:-}"
+      if [[ "$MODE" != "symlink" && "$MODE" != "copy" ]]; then
+        echo "error: --mode must be symlink or copy" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
     -h|--help)
-      sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
-      echo "unknown arg: $arg" >&2
+      echo "unknown arg: $1" >&2
       exit 2
       ;;
   esac
 done
-
-if [[ ! -d "$AGENTS_SRC" ]]; then
-  echo "error: $AGENTS_SRC does not exist" >&2
-  exit 1
-fi
 
 run() {
   if [[ "$DRY_RUN" == 1 ]]; then
@@ -51,6 +59,44 @@ run() {
   else
     "$@"
   fi
+}
+
+sha256_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+package_version() {
+  node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(p.version);' "$REPO_ROOT/package.json"
+}
+
+lock_commit() {
+  node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(p.upstream.commit);' "$LOCK_FILE"
+}
+
+select_mode() {
+  if [[ "$MODE" != "auto" ]]; then
+    printf '%s' "$MODE"
+  elif [[ -d "$REPO_ROOT/.git" || -f "$REPO_ROOT/.git" ]]; then
+    printf 'symlink'
+  else
+    printf 'copy'
+  fi
+}
+
+validate_sources() {
+  if [[ ! -d "$AGENTS_SRC" ]]; then
+    echo "error: $AGENTS_SRC does not exist" >&2
+    exit 1
+  fi
+  if [[ ! -d "$SKILLS_SRC" ]]; then
+    echo "error: $SKILLS_SRC does not exist" >&2
+    exit 1
+  fi
+  if [[ ! -f "$LOCK_FILE" ]]; then
+    echo "error: $LOCK_FILE does not exist" >&2
+    exit 1
+  fi
+  node "$REPO_ROOT/scripts/verify-vendored-skills.mjs" --repo "$REPO_ROOT"
 }
 
 force_remove() {
@@ -62,152 +108,187 @@ force_remove() {
   fi
 }
 
-mkdir_dest() {
-  local dest="$1"
-  if [[ ! -d "$dest" ]]; then
-    run mkdir -p "$dest"
-  fi
+is_manifest_managed() {
+  local path_to_check="$1"
+  [[ -f "$MANIFEST" ]] || return 1
+  node -e '
+const fs = require("fs");
+const manifest = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const wanted = process.argv[2];
+const paths = [...(manifest.installedAgents || []), ...(manifest.installedSkills || [])];
+process.exit(paths.includes(wanted) ? 0 : 1);
+' "$MANIFEST" "$path_to_check"
 }
 
-superpowers_installed() {
-  # Check 1: plugin entry in opencode.json
-  if [[ -f "$OPENCODE_CONFIG" ]]; then
-    if grep -q 'obra/superpowers' "$OPENCODE_CONFIG" 2>/dev/null; then
+is_current_symlink() {
+  local dest="$1"
+  local src="$2"
+  [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]
+}
+
+install_one() {
+  local mode="$1"
+  local src="$2"
+  local dest="$3"
+  local label="$4"
+
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    if [[ "$mode" == "symlink" ]] && is_current_symlink "$dest" "$src"; then
+      echo "ok    $label (already linked)"
       return 0
     fi
-  fi
-
-  # Check 2: filesystem skills (legacy / manual install)
-  local required_skills=(
-    using-superpowers
-    brainstorming
-    writing-plans
-    subagent-driven-development
-    verification-before-completion
-  )
-  local all_present=1
-  for skill in "${required_skills[@]}"; do
-    if [[ ! -f "$SKILLS_DEST/$skill/SKILL.md" ]]; then
-      all_present=0
-      break
-    fi
-  done
-  [[ "$all_present" == 1 ]]
-}
-
-prompt_install_superpowers() {
-  echo ""
-  printf 'Install Superpowers now? [y/N] '
-  local answer
-  read -r answer
-  if [[ "$answer" =~ ^[Yy]$ ]]; then
-    echo ""
-    echo "Add the following to your OpenCode plugin list in $OPENCODE_CONFIG:"
-    echo ""
-    echo '  "plugin": ['
-    echo '    "superpowers@git+https://github.com/obra/superpowers.git"'
-    echo '  ]'
-    echo ""
-    echo "Or run: opencode plugin add superpowers@git+https://github.com/obra/superpowers.git"
-    echo ""
-    echo "After installing Superpowers, restart OpenCode and the agents will be ready."
-    echo ""
-  fi
-}
-
-warn_if_skills_missing() {
-  if ! superpowers_installed; then
-    echo "warn  Superpowers not detected (checked $OPENCODE_CONFIG and $SKILLS_DEST)"
-    echo "warn  These agents require Superpowers to be installed first."
-    if [[ "$DRY_RUN" != 1 ]]; then
-      prompt_install_superpowers
-    fi
-  fi
-}
-
-uninstall() {
-  local removed_agents=0
-
-  if [[ -d "$AGENTS_DEST" ]]; then
-    if compgen -G "$AGENTS_SRC/*.md" > /dev/null; then
-      for src in "$AGENTS_SRC"/*.md; do
-        [[ -e "$src" ]] || continue
-        local name; name="$(basename "$src")"
-        local link="$AGENTS_DEST/$name"
-        if [[ -L "$link" && "$(readlink "$link")" == "$src" ]]; then
-          run rm "$link"
-          if [[ "$DRY_RUN" == 1 ]]; then
-            echo "would remove $link"
-          else
-            echo "removed $link"
-          fi
-          removed_agents=$((removed_agents+1))
-        fi
-      done
+    if is_manifest_managed "$dest"; then
+      force_remove "$dest"
+    elif [[ "$FORCE" == 1 ]]; then
+      echo "force $label (replacing unmanaged existing path)"
+      force_remove "$dest"
     else
-      echo "skip  agents uninstall ($AGENTS_SRC missing or empty)"
+      echo "skip  $label (exists and is not managed by $PROJECT_ID; pass --force to overwrite)"
+      return 10
     fi
-  else
-    echo "skip  agents uninstall ($AGENTS_DEST does not exist)"
   fi
 
-  if [[ "$DRY_RUN" == 1 ]]; then
-    echo "would uninstall $removed_agents agent symlink(s)"
+  if [[ "$mode" == "symlink" ]]; then
+    run ln -s "$src" "$dest"
+    echo "link  $label -> $src"
   else
-    echo "uninstalled $removed_agents agent symlink(s)"
+    if [[ -d "$src" ]]; then
+      run cp -R "$src" "$dest"
+    else
+      run cp "$src" "$dest"
+    fi
+    echo "copy  $label -> $dest"
+  fi
+  return 0
+}
+
+write_manifest() {
+  local mode="$1"
+  shift
+  local package_ver lock_sha upstream_commit
+  package_ver="$(package_version)"
+  lock_sha="$(sha256_file "$LOCK_FILE")"
+  upstream_commit="$(lock_commit)"
+  run mkdir -p "$(dirname "$MANIFEST")"
+  if [[ "$DRY_RUN" == 1 ]]; then
+    echo "would write manifest $MANIFEST"
+    return 0
+  fi
+  node - <<'NODE' "$MANIFEST" "$PROJECT_ID" "$package_ver" "$mode" "$REPO_ROOT" "$lock_sha" "$upstream_commit" "$@"
+const fs = require("fs");
+const [manifestPath, projectId, packageVersion, mode, sourceRoot, lockSha256, upstreamCommit, ...installed] = process.argv.slice(2);
+const installedAgents = installed.filter((entry) => entry.includes("/agents/"));
+const installedSkills = installed.filter((entry) => entry.includes("/skills/"));
+const manifest = {
+  projectId,
+  installerVersion: 1,
+  packageVersion,
+  installMode: mode,
+  source: sourceRoot,
+  installedAt: new Date().toISOString(),
+  lockSha256,
+  upstreamCommit,
+  installedAgents,
+  installedSkills,
+};
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+    echo "manifest $MANIFEST"
+}
+
+install_all() {
+  validate_sources
+  local mode installed_count skipped_count
+  mode="$(select_mode)"
+  installed_count=0
+  skipped_count=0
+  echo "mode  $mode"
+  run mkdir -p "$AGENTS_DEST" "$SKILLS_DEST"
+
+  local installed_paths=()
+  while IFS= read -r -d '' src; do
+    local name dest
+    name="$(basename "$src")"
+    dest="$AGENTS_DEST/$name"
+    if install_one "$mode" "$src" "$dest" "agent $name"; then
+      installed_paths+=("$dest")
+      installed_count=$((installed_count+1))
+    else
+      skipped_count=$((skipped_count+1))
+    fi
+  done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
+
+  while IFS= read -r -d '' src; do
+    local name dest
+    name="$(basename "$src")"
+    [[ "$name" == "superpowers.lock.json" ]] && continue
+    dest="$SKILLS_DEST/$name"
+    if install_one "$mode" "$src" "$dest" "skill $name"; then
+      installed_paths+=("$dest")
+      installed_count=$((installed_count+1))
+    else
+      skipped_count=$((skipped_count+1))
+    fi
+  done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
+
+  write_manifest "$mode" "${installed_paths[@]}"
+  echo "installed/refreshed $installed_count managed entrie(s)"
+  if [[ "$skipped_count" -gt 0 ]]; then
+    echo "skipped $skipped_count existing unmanaged entrie(s)"
   fi
 }
 
-install() {
-  warn_if_skills_missing
-  mkdir_dest "$AGENTS_DEST"
+uninstall_from_manifest() {
+  if [[ ! -f "$MANIFEST" ]]; then
+    return 1
+  fi
+  local removed=0
+  while IFS= read -r -d '' managed_path; do
+    if [[ -e "$managed_path" || -L "$managed_path" ]]; then
+      force_remove "$managed_path"
+      echo "removed $managed_path"
+      removed=$((removed+1))
+    fi
+  done < <(node -e '
+const fs = require("fs");
+const manifest = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkills || [])]) process.stdout.write(`${p}\0`);
+' "$MANIFEST")
+  run rm -f "$MANIFEST"
+  echo "uninstalled $removed managed entrie(s)"
+}
 
-  local agents_installed=0 agents_skipped=0
-  if compgen -G "$AGENTS_SRC/*.md" > /dev/null; then
-    for src in "$AGENTS_SRC"/*.md; do
-      [[ -e "$src" ]] || continue
-      local name; name="$(basename "$src")"
-      local target="$src"
-      local link="$AGENTS_DEST/$name"
-
-      if [[ -e "$link" || -L "$link" ]]; then
-        if [[ -L "$link" && "$(readlink "$link")" == "$target" ]]; then
-          echo "ok    $name (already linked)"
-          agents_installed=$((agents_installed+1))
-          continue
-        fi
-        if [[ "$FORCE" == 1 ]]; then
-          force_remove "$link"
-        else
-          echo "skip  $name (exists; pass --force to overwrite)"
-          agents_skipped=$((agents_skipped+1))
-          continue
-        fi
+uninstall_conservative_symlinks() {
+  local removed=0
+  for dir in "$AGENTS_DEST" "$SKILLS_DEST"; do
+    [[ -d "$dir" ]] || continue
+    while IFS= read -r -d '' link_path; do
+      local target
+      target="$(readlink "$link_path")"
+      if [[ "$target" == "$REPO_ROOT"/* ]]; then
+        force_remove "$link_path"
+        echo "removed $link_path"
+        removed=$((removed+1))
       fi
+    done < <(find "$dir" -maxdepth 1 -type l -print0)
+  done
+  echo "uninstalled $removed symlink entrie(s) without manifest"
+}
 
-      run ln -s "$target" "$link"
-      if [[ "$DRY_RUN" == 1 ]]; then
-        echo "would link $name -> $target"
-      else
-        echo "link  $name -> $target"
-      fi
-      agents_installed=$((agents_installed+1))
-    done
+uninstall_all() {
+  if uninstall_from_manifest; then
+    return 0
   fi
-
-  echo
-  if [[ "$DRY_RUN" == 1 ]]; then
-    echo "would install $agents_installed agent(s) into $AGENTS_DEST"
-  else
-    echo "installed $agents_installed agent(s) into $AGENTS_DEST"
+  echo "warn  local install manifest not found at $MANIFEST"
+  if [[ "$(select_mode)" == "copy" ]]; then
+    echo "error: refusing copy-mode uninstall without a managed manifest" >&2
+    exit 1
   fi
-  if [[ "$agents_skipped" -gt 0 ]]; then
-    echo "skipped $agents_skipped agent(s) (use --force to overwrite)"
-  fi
+  uninstall_conservative_symlinks
 }
 
 if [[ "$UNINSTALL" == 1 ]]; then
-  uninstall
+  uninstall_all
 else
-  install
+  install_all
 fi
