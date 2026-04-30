@@ -1,0 +1,38 @@
+{
+  "name": "opencode-superpowers",
+  "version": "0.1.0",
+  "description": "Superpowers agent pack for OpenCode — primary orchestrator + spec/audit/plan/implement subagents that drive the upstream Superpowers skill workflow. Designed for OpenCode users on a GitHub Copilot subscription who already know Superpowers.",
+  "bin": {
+    "opencode-superpowers": "bin/opencode-superpowers.js"
+  },
+  "files": [
+    "agents",
+    "scripts",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "install-agents": "bash scripts/install-opencode.sh"
+  },
+  "keywords": [
+    "opencode",
+    "superpowers",
+    "agents",
+    "copilot",
+    "ai",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrth2/opencode-superpowers.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mrth2/opencode-superpowers/issues"
+  },
+  "homepage": "https://github.com/mrth2/opencode-superpowers#readme",
+  "engines": {
+    "node": ">=16"
+  }
+}
