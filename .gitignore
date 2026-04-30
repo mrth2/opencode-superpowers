@@ -1,0 +1,17 @@
+# Editor / OS
+.DS_Store
+*.swp
+
+# KeepGoing local state
+.keepgoing/
+
+# Worktrees
+.worktrees/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python bytecode
+__pycache__/
+*.pyc
