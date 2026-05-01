@@ -128,13 +128,31 @@ test("uninstall removes the agent file, manifest, and at least one installed ski
     OPENCODE_SUPERPOWERS_MANIFEST: manifestPath,
   };
   const agentPath = path.join(agentsDir, "superpowers.md");
-  const installedSkillPath = path.join(skillsDir, "using-superpowers", "SKILL.md");
+  const installedSkillPath = path.join(skillsDir, "superpowers-using-superpowers", "SKILL.md");
 
   const install = runInstaller(["--profile", "default"], { env });
   assert.equal(install.status, 0, install.stderr || install.stdout);
   assert.equal(fs.existsSync(agentPath), true);
   assert.equal(fs.existsSync(manifestPath), true);
   assert.equal(fs.existsSync(installedSkillPath), true);
+  assert.match(
+    fs.readFileSync(installedSkillPath, "utf8"),
+    /^name:\s+superpowers-using-superpowers\s*$/m,
+  );
+  const installedBrainstormingSkillMd = path.join(skillsDir, "superpowers-brainstorming", "SKILL.md");
+  assert.equal(fs.existsSync(installedBrainstormingSkillMd), true);
+  assert.match(
+    fs.readFileSync(installedBrainstormingSkillMd, "utf8"),
+    /^name:\s+superpowers-brainstorming\s*$/m,
+  );
+  const installedExecutingSkillMd = path.join(skillsDir, "superpowers-executing-plans", "SKILL.md");
+  assert.equal(fs.existsSync(installedExecutingSkillMd), true);
+  const executingContent = fs.readFileSync(installedExecutingSkillMd, "utf8");
+  assert.match(executingContent, /superpowers-writing-plans/);
+  assert.ok(
+    !/superpowers:writing-plans/.test(executingContent),
+    "executing-plans SKILL.md still contains pre-rename `superpowers:writing-plans` reference",
+  );
 
   const uninstall = runInstaller(["--uninstall"], { env });
   assert.equal(uninstall.status, 0, uninstall.stderr || uninstall.stdout);

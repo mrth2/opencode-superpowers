@@ -20,14 +20,16 @@ Five OpenCode agents are installed from `agents/`:
 | `superpowers-plan-writer` | subagent | Turns an approved spec into an executable implementation plan. |
 | `superpowers-implementer` | subagent | Executes the approved plan task-by-task with verification gates. |
 
-The installer also installs the supported vendored skill set from `skills/`:
+The installer also installs the supported vendored skill set from `skills/`. Skills are installed under a `superpowers-` prefix so the bundled workflow can be scoped via a single wildcard rule in `opencode.json` and does not bleed into other primary agents (`build`, `plan`, etc.):
 
-- `using-superpowers`
-- `brainstorming`
-- `writing-plans`
-- `subagent-driven-development`
-- `executing-plans`
-- `verification-before-completion`
+- `superpowers-using-superpowers`
+- `superpowers-brainstorming`
+- `superpowers-writing-plans`
+- `superpowers-subagent-driven-development`
+- `superpowers-executing-plans`
+- `superpowers-verification-before-completion`
+
+The vendored sources under `skills/<name>/` stay byte-identical to upstream `obra/superpowers`; the installer copies each skill to `~/.config/opencode/skills/superpowers-<name>/` and rewrites the SKILL.md `name:` field plus internal `superpowers:<skill>` cross-references during install. Lockfile verification (`npm run verify:skills`) continues to run against the upstream-faithful sources.
 
 The installer renders generated agent copies from the selected profile. The default profile is Copilot Pro-safe, and the premium profile is opt-in.
 
@@ -79,10 +81,12 @@ Clone installs use symlink mode for most files, but the profile-specific main ag
 
 ### Install modes
 
-The installer chooses the mode automatically:
+The installer chooses the mode automatically for agents:
 
 - **Symlink mode** when the source has a `.git` directory or gitfile.
 - **Copy mode** when the source looks like a packaged install.
+
+Skills always install in copy mode regardless of the chosen mode, because each skill is rewritten during install to apply the `superpowers-` namespace and rename internal cross-references.
 
 For maintenance testing, the mode can be forced:
 
@@ -114,12 +118,12 @@ ls ~/.config/opencode/agents/
 # superpowers.md
 
 ls ~/.config/opencode/skills/
-# brainstorming
-# executing-plans
-# subagent-driven-development
-# using-superpowers
-# verification-before-completion
-# writing-plans
+# superpowers-brainstorming
+# superpowers-executing-plans
+# superpowers-subagent-driven-development
+# superpowers-using-superpowers
+# superpowers-verification-before-completion
+# superpowers-writing-plans
 ```
 
 You can verify the vendored snapshot in a clone with:
@@ -133,6 +137,42 @@ Expected output starts with:
 ```text
 ok vendored skills verified:
 ```
+
+## Restricting skills to the superpowers agents
+
+OpenCode filesystem skills at `~/.config/opencode/skills/` are visible to every primary agent that has `skill: allow` (the default `build` and `plan` agents included). Without scoping, a built-in `build` or `plan` session can auto-trigger `superpowers-brainstorming`, `superpowers-writing-plans`, etc., based on their assertive descriptions.
+
+Because every bundled skill installs under the `superpowers-` prefix, you can isolate them with one wildcard rule in `~/.config/opencode/opencode.json`: deny `superpowers-*` globally, then allow it for each `superpowers*` agent. Per [OpenCode's skill permissions](https://opencode.ai/docs/skills/), `deny` hides the skill from the agent entirely (auto-trigger and slash invocation alike) — when you want to run the workflow, switch to the `superpowers` agent.
+
+```json
+{
+  "permission": {
+    "skill": {
+      "*": "allow",
+      "superpowers-*": "deny"
+    }
+  },
+  "agent": {
+    "superpowers": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    },
+    "superpowers-spec-writer": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    },
+    "superpowers-spec-auditor": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    },
+    "superpowers-plan-writer": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    },
+    "superpowers-implementer": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    }
+  }
+}
+```
+
+This snippet is opt-in. The installer does not modify your `opencode.json`.
 
 ## Updating
 
@@ -172,7 +212,7 @@ The agents are plain markdown with YAML frontmatter. To change the model source,
 model: anthropic/claude-sonnet-4-5
 ```
 
-Clone installs use symlinks, so local edits in this repo are picked up immediately by OpenCode after restart. The profile-specific main agent is rendered as a generated copy, so rerun the installer after editing a package copy or after `git pull`.
+Clone installs use symlinks for non-rendered agent files, so edits to those agents in this repo are picked up immediately by OpenCode after restart. The profile-specific main agent is rendered as a generated copy. Skills always install as copy-with-rewrite (the installer prefixes them with `superpowers-` and rewrites cross-references), so rerun the installer after editing a vendored skill or after `git pull`.
 
 ## License
 

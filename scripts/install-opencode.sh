@@ -198,6 +198,42 @@ install_one() {
   return 0
 }
 
+install_skill_transform() {
+  local src="$1"
+  local dest="$2"
+  local original_name="$3"
+  local new_name="$4"
+  local label="skill $new_name (from $original_name)"
+
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    if is_manifest_managed "$dest"; then
+      force_remove "$dest"
+    elif [[ "$FORCE" == 1 ]]; then
+      echo "force $label (replacing unmanaged existing path)"
+      force_remove "$dest"
+    else
+      echo "error: $dest exists and is not managed by $PROJECT_ID; pass --force to overwrite" >&2
+      return 10
+    fi
+  fi
+
+  if [[ "$DRY_RUN" == 1 ]]; then
+    printf '[dry-run] copy+rename %s -> %s\n' "$src" "$dest"
+    return 0
+  fi
+
+  if ! node "$REPO_ROOT/scripts/install-skill-rewrite.mjs" \
+      --src "$src" \
+      --dest "$dest" \
+      --original-name "$original_name" \
+      --new-name "$new_name"; then
+    echo "error: failed to install/transform skill $original_name -> $new_name" >&2
+    return 1
+  fi
+  echo "copy  $label -> $dest"
+  return 0
+}
+
 has_unmanaged_conflict() {
   local mode="$1"
   local src="$2"
@@ -241,11 +277,12 @@ preflight_install_conflicts() {
   done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
 
   while IFS= read -r -d '' src; do
-    local name dest
-    name="$(basename "$src")"
-    [[ "$name" == "superpowers.lock.json" ]] && continue
-    dest="$SKILLS_DEST/$name"
-    if has_unmanaged_conflict "$mode" "$src" "$dest"; then
+    local original_name new_name dest
+    original_name="$(basename "$src")"
+    [[ "$original_name" == "superpowers.lock.json" ]] && continue
+    new_name="superpowers-$original_name"
+    dest="$SKILLS_DEST/$new_name"
+    if has_unmanaged_conflict "copy" "$src" "$dest"; then
       return 10
     fi
   done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
@@ -325,11 +362,12 @@ install_all() {
   done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
 
   while IFS= read -r -d '' src; do
-    local name dest
-    name="$(basename "$src")"
-    [[ "$name" == "superpowers.lock.json" ]] && continue
-    dest="$SKILLS_DEST/$name"
-    if install_one "$mode" "$src" "$dest" "skill $name"; then
+    local original_name new_name dest
+    original_name="$(basename "$src")"
+    [[ "$original_name" == "superpowers.lock.json" ]] && continue
+    new_name="superpowers-$original_name"
+    dest="$SKILLS_DEST/$new_name"
+    if install_skill_transform "$src" "$dest" "$original_name" "$new_name"; then
       installed_paths+=("$dest")
       installed_count=$((installed_count+1))
     else
