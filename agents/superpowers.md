@@ -13,7 +13,19 @@ permission:
   todowrite: allow
   skill: allow
   edit: ask
-  bash: ask
+  bash:
+    "git status": allow
+    "git status *": allow
+    "git log *": allow
+    "git diff *": allow
+    "git show *": allow
+    "git branch": allow
+    "git branch *": allow
+    "git rev-parse *": allow
+    "git remote -v": allow
+    "ls": allow
+    "ls *": allow
+    "*": ask
   task:
     "*": deny
     "superpowers-spec-writer": allow
