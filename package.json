@@ -20,7 +20,8 @@
     "sync:skills": "node scripts/sync-superpowers-skills.mjs",
     "test:sync": "node --test tests/sync-superpowers-skills.test.mjs",
     "test:install": "node --test tests/install-opencode.test.mjs",
-    "test": "npm run verify:skills && npm run test:sync && npm run test:install"
+    "test": "npm run verify:skills && npm run test:sync && npm run test:install",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "opencode",
