@@ -1,7 +1,7 @@
 ---
 name: superpowers
 description: Superpowers-driven agent. Brainstorms with you, then delegates spec writing, auditing, planning, and implementation to specialized subagents. Enforces the bundled skill-first workflow.
-model: github-copilot/gpt-5.4-mini
+model: __SUPERPOWERS_MODEL__
 mode: primary
 color: "#8b5cf6"
 permission:

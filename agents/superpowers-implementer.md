@@ -1,7 +1,7 @@
 ---
 name: superpowers-implementer
 description: Executes the approved implementation plan. Invoked by the superpowers primary agent after the user confirms the plan.
-model: github-copilot/gpt-5.3-codex
+model: __SUPERPOWERS_MODEL__
 mode: subagent
 hidden: true
 permission:

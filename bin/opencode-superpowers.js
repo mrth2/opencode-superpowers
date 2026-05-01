@@ -8,6 +8,8 @@
 //
 // Usage:
 //   npx opencode-superpowers              # install agents and skills
+//   npx opencode-superpowers --profile default  # Copilot Pro-safe profile
+//   npx opencode-superpowers --profile premium  # premium profile
 //   npx opencode-superpowers --force      # overwrite existing entries
 //   npx opencode-superpowers --dry-run    # show what would happen
 //   npx opencode-superpowers --uninstall  # remove managed entries

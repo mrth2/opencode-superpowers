@@ -1,7 +1,7 @@
 ---
 name: superpowers-spec-auditor
 description: Audits a written spec for ambiguity, contradictions, missing decisions, and unnecessary scope. Invoked by the superpowers primary agent after spec writing.
-model: github-copilot/claude-sonnet-4.6
+model: __SUPERPOWERS_MODEL__
 mode: subagent
 hidden: true
 permission:

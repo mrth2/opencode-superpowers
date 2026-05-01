@@ -12,6 +12,8 @@
 #   ./scripts/install-opencode.sh --uninstall      # remove managed entries
 #   ./scripts/install-opencode.sh --mode symlink   # force symlink mode
 #   ./scripts/install-opencode.sh --mode copy      # force copy mode
+#   ./scripts/install-opencode.sh --profile default # install default model profile
+#   ./scripts/install-opencode.sh --profile premium # install premium model profile
 
 set -euo pipefail
 
@@ -28,6 +30,7 @@ FORCE=0
 DRY_RUN=0
 UNINSTALL=0
 MODE="auto"
+PROFILE="default"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -42,8 +45,16 @@ while [[ $# -gt 0 ]]; do
       fi
       shift 2
       ;;
+    --profile)
+      PROFILE="${2:-}"
+      if [[ "$PROFILE" != "default" && "$PROFILE" != "premium" ]]; then
+        echo "error: unknown profile: $PROFILE" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
     -h|--help)
-      sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -81,6 +92,31 @@ select_mode() {
   else
     printf 'copy'
   fi
+}
+
+profile_model() {
+  case "$PROFILE" in
+    default) printf 'github-copilot/gpt-5.4-mini' ;;
+    premium) printf 'github-copilot/gpt-5.5' ;;
+    *)
+      echo "error: unknown profile: $PROFILE" >&2
+      exit 2
+      ;;
+  esac
+}
+
+render_superpowers_agent() {
+  local src="$1"
+  local dest="$2"
+  local model
+  model="$(profile_model)"
+  awk -v model="$model" '
+    /^model:[[:space:]]+/ {
+      print "model: " model
+      next
+    }
+    { print }
+  ' "$src" > "$dest"
 }
 
 validate_sources() {
@@ -143,7 +179,7 @@ install_one() {
       echo "force $label (replacing unmanaged existing path)"
       force_remove "$dest"
     else
-      echo "skip  $label (exists and is not managed by $PROJECT_ID; pass --force to overwrite)"
+      echo "error: $dest exists and is not managed by $PROJECT_ID; pass --force to overwrite" >&2
       return 10
     fi
   fi
@@ -159,6 +195,61 @@ install_one() {
     fi
     echo "copy  $label -> $dest"
   fi
+  return 0
+}
+
+has_unmanaged_conflict() {
+  local mode="$1"
+  local src="$2"
+  local dest="$3"
+
+  if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+    return 1
+  fi
+  if [[ "$mode" == "symlink" ]] && is_current_symlink "$dest" "$src"; then
+    return 1
+  fi
+  if is_manifest_managed "$dest"; then
+    return 1
+  fi
+  if [[ "$FORCE" == 1 ]]; then
+    return 1
+  fi
+
+  echo "error: $dest exists and is not managed by $PROJECT_ID; pass --force to overwrite" >&2
+  return 0
+}
+
+preflight_install_conflicts() {
+  local mode="$1"
+  while IFS= read -r -d '' src; do
+    local name dest entry_mode rendered_src
+    name="$(basename "$src")"
+    dest="$AGENTS_DEST/$name"
+    entry_mode="$mode"
+    rendered_src="$src"
+    if [[ "$name" == "superpowers.md" ]]; then
+      rendered_src="$(mktemp "${TMPDIR:-/tmp}/opencode-superpowers-agent.XXXXXX")"
+      render_superpowers_agent "$src" "$rendered_src"
+      entry_mode="copy"
+    fi
+    if has_unmanaged_conflict "$entry_mode" "$rendered_src" "$dest"; then
+      [[ "$rendered_src" != "$src" ]] && rm -f "$rendered_src"
+      return 10
+    fi
+    [[ "$rendered_src" != "$src" ]] && rm -f "$rendered_src"
+  done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
+
+  while IFS= read -r -d '' src; do
+    local name dest
+    name="$(basename "$src")"
+    [[ "$name" == "superpowers.lock.json" ]] && continue
+    dest="$SKILLS_DEST/$name"
+    if has_unmanaged_conflict "$mode" "$src" "$dest"; then
+      return 10
+    fi
+  done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
+
   return 0
 }
 
@@ -203,18 +294,33 @@ install_all() {
   installed_count=0
   skipped_count=0
   echo "mode  $mode"
+
+  if ! preflight_install_conflicts "$mode"; then
+    exit 10
+  fi
+
   run mkdir -p "$AGENTS_DEST" "$SKILLS_DEST"
 
   local installed_paths=()
   while IFS= read -r -d '' src; do
-    local name dest
+    local name dest entry_mode rendered_src
     name="$(basename "$src")"
     dest="$AGENTS_DEST/$name"
-    if install_one "$mode" "$src" "$dest" "agent $name"; then
+    entry_mode="$mode"
+    rendered_src="$src"
+    if [[ "$name" == "superpowers.md" ]]; then
+      rendered_src="$(mktemp "${TMPDIR:-/tmp}/opencode-superpowers-agent.XXXXXX")"
+      render_superpowers_agent "$src" "$rendered_src"
+      entry_mode="copy"
+    fi
+    if install_one "$entry_mode" "$rendered_src" "$dest" "agent $name"; then
       installed_paths+=("$dest")
       installed_count=$((installed_count+1))
     else
       skipped_count=$((skipped_count+1))
+    fi
+    if [[ "$rendered_src" != "$src" ]]; then
+      rm -f "$rendered_src"
     fi
   done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
 
@@ -234,7 +340,8 @@ install_all() {
   write_manifest "$mode" "${installed_paths[@]}"
   echo "installed/refreshed $installed_count managed entrie(s)"
   if [[ "$skipped_count" -gt 0 ]]; then
-    echo "skipped $skipped_count existing unmanaged entrie(s)"
+    echo "error: skipped $skipped_count existing unmanaged entrie(s)" >&2
+    exit 1
   fi
 }
 

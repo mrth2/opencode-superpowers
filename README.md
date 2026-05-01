@@ -5,7 +5,7 @@
 Built for people who:
 
 - use **OpenCode** as their CLI coding agent,
-- pay for a **GitHub Copilot subscription** or have compatible model IDs configured,
+- want a **Copilot Pro-safe default profile** or an optional premium profile,
 - and want the Superpowers workflow available through OpenCode agents with one install command.
 
 ## What's in the pack
@@ -29,7 +29,7 @@ The installer also installs the supported vendored skill set from `skills/`:
 - `executing-plans`
 - `verification-before-completion`
 
-All five agents are routed to `github-copilot/*` models by default. Edit the `model:` field in each agent file if you want to use a different provider.
+The installer renders the main `superpowers` agent as a generated copy with the selected profile model, and the other agents use the same placeholder token so the installer can render matching copies. The default profile is designed to stay within Copilot Pro-safe model IDs; the premium profile is opt-in.
 
 ## What is not bundled
 
@@ -40,10 +40,10 @@ The vendored snapshot is pinned in `skills/superpowers.lock.json` with the upstr
 ## Prerequisites
 
 1. **OpenCode** installed and working.
-2. A **GitHub Copilot subscription** configured as a provider in OpenCode, unless you edit the agent `model:` fields to use another provider.
+2. A compatible **GitHub Copilot** model configuration in OpenCode, or the default profile if you want the Pro-safe model set.
 3. **Node.js 16 or newer** for the `npx` entrypoint and verification scripts.
 
-You do not need to install `obra/superpowers` separately for this agent pack.
+You do not need to install `obra/superpowers` separately for this agent pack; the required skills are bundled here.
 
 ## Install
 
@@ -51,6 +51,8 @@ You do not need to install `obra/superpowers` separately for this agent pack.
 
 ```sh
 npx opencode-superpowers
+npx opencode-superpowers --profile default
+npx opencode-superpowers --profile premium
 ```
 
 Packaged installs use copy mode automatically so installed files do not depend on npm cache paths remaining available.
@@ -59,6 +61,8 @@ Common flags:
 
 ```sh
 npx opencode-superpowers --dry-run     # preview only
+npx opencode-superpowers --profile default  # Copilot Pro-safe profile
+npx opencode-superpowers --profile premium  # opt-in premium profile
 npx opencode-superpowers --force       # overwrite conflicting unmanaged entries
 npx opencode-superpowers --uninstall   # remove entries recorded in the local manifest
 ```
@@ -71,7 +75,7 @@ cd ~/Code/opencode-superpowers
 ./scripts/install-opencode.sh
 ```
 
-Clone installs use symlink mode automatically. Pulling the repo updates linked agent and skill content in place, and re-running the installer reconciles added or removed managed entries.
+Clone installs use symlink mode automatically. Pulling the repo updates linked skill content in place, while the profile-specific `superpowers` agent is rendered as a generated copy. Re-run the installer after `git pull` or a package refresh to reconcile added or removed managed entries.
 
 ### Install modes
 
@@ -133,7 +137,7 @@ ok vendored skills verified:
 ## Updating
 
 - Installed via `git clone`: run `git pull`, then `./scripts/install-opencode.sh` to refresh the manifest and reconcile added or removed managed entries.
-- Installed via `npx`: run `npx opencode-superpowers@latest`.
+- Installed via `npx`: run `npx opencode-superpowers@latest` or rerun `npx opencode-superpowers --profile default` / `--profile premium` after a refresh.
 
 ## Uninstall
 
@@ -162,13 +166,13 @@ Maintainers can run the sync script manually when refreshing the vendored snapsh
 
 ## Customizing
 
-The agents are plain markdown with YAML frontmatter. To change the model, edit the `model:` line in `agents/<name>.md`. For example, to swap the orchestrator off Copilot:
+The agents are plain markdown with YAML frontmatter. To change the model source, edit the `model:` placeholder in `agents/<name>.md` and rerun the installer. For example, to swap the orchestrator off the bundled profile flow:
 
 ```yaml
 model: anthropic/claude-sonnet-4-5
 ```
 
-Clone installs use symlinks, so local edits in this repo are picked up immediately by OpenCode after restart. Packaged installs use copies, so rerun the installer after editing a package copy.
+Clone installs keep the source templates linked, but packaged installs use generated copies, so rerun the installer after editing a package copy.
 
 ## License
 
