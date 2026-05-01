@@ -5,7 +5,7 @@
 Built for people who:
 
 - use **OpenCode** as their CLI coding agent,
-- pay for a **GitHub Copilot subscription** or have compatible model IDs configured,
+- want a **Copilot Pro-safe default profile** or an optional premium profile,
 - and want the Superpowers workflow available through OpenCode agents with one install command.
 
 ## What's in the pack
@@ -43,7 +43,7 @@ The vendored snapshot is pinned in `skills/superpowers.lock.json` with the upstr
 2. A **GitHub Copilot subscription** configured as a provider in OpenCode, unless you use the premium profile or edit the agent `model:` fields to use another provider.
 3. **Node.js 16 or newer** for the `npx` entrypoint and verification scripts.
 
-You do not need to install `obra/superpowers` separately for this agent pack.
+You do not need to install `obra/superpowers` separately for this agent pack; the required skills are bundled here.
 
 ## Install
 
@@ -61,6 +61,8 @@ Common flags:
 
 ```sh
 npx opencode-superpowers --dry-run     # preview only
+npx opencode-superpowers --profile default  # Copilot Pro-safe profile
+npx opencode-superpowers --profile premium  # opt-in premium profile
 npx opencode-superpowers --force       # overwrite conflicting unmanaged entries
 npx opencode-superpowers --uninstall   # remove entries recorded in the local manifest
 ```
@@ -164,7 +166,7 @@ Maintainers can run the sync script manually when refreshing the vendored snapsh
 
 ## Customizing
 
-The agents are plain markdown with YAML frontmatter. To change the model, edit the `model:` line in `agents/<name>.md`. For example, to swap the orchestrator off Copilot:
+The agents are plain markdown with YAML frontmatter. To change the model source, edit the `model:` placeholder in `agents/<name>.md` and rerun the installer. For example, to swap the orchestrator off the bundled profile flow:
 
 ```yaml
 model: anthropic/claude-sonnet-4-5
