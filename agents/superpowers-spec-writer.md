@@ -9,7 +9,6 @@ permission:
   glob: allow
   grep: allow
   edit: allow
-  write: allow
   bash: allow
   todowrite: allow
   skill: allow
@@ -24,7 +23,7 @@ You will receive a structured brainstorm summary from the primary agent. Your jo
 ## Steps
 
 1. Read the brainstorm summary you were given carefully.
-2. Load the `brainstorming` skill and apply only its spec quality checks and spec content structure guidance (not brainstorming dialogue flow).
+2. Load the `superpowers-brainstorming` skill and apply only its spec quality checks and spec content structure guidance (not brainstorming dialogue flow).
 3. Explore relevant project files for context (`read`, `glob`, `grep`) before writing.
 4. Write the spec to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (run `mkdir -p docs/superpowers/specs` first). Use today's date for `YYYY-MM-DD` and derive `<topic>` from the brainstorm subject.
 5. The spec must include:

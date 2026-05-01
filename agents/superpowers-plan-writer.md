@@ -9,7 +9,6 @@ permission:
   glob: allow
   grep: allow
   edit: allow
-  write: allow
   bash: allow
   todowrite: allow
   skill: allow
@@ -24,7 +23,7 @@ You will receive the path to an approved spec. Your job is to write an exhaustiv
 ## Steps
 
 1. Read the spec file at the path provided.
-2. Load the `writing-plans` skill and follow it exactly.
+2. Load the `superpowers-writing-plans` skill and follow it exactly.
 3. Explore only the source files needed to understand the target change and existing patterns before writing the plan.
 4. Write the plan to `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` (run `mkdir -p docs/superpowers/plans` first). Use today's date and derive `<feature>` from the spec topic.
 5. The plan must follow these requirements:

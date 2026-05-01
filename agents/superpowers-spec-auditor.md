@@ -22,7 +22,7 @@ You will receive the path to a spec file. Your job is to audit it as a strict ed
 ## Steps
 
 1. Read the spec file at the path provided.
-2. Load the `brainstorming` skill and apply its self-review checklist (placeholder scan, internal consistency, scope check, ambiguity check).
+2. Load the `superpowers-brainstorming` skill and apply its self-review checklist (placeholder scan, internal consistency, scope check, ambiguity check).
 3. Check for each of the following issues:
    - **Placeholders** — any "TBD", "…", or "TODO" in the spec body
    - **Contradictions** — statements that conflict with each other

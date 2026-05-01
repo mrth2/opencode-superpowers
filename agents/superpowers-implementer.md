@@ -9,7 +9,6 @@ permission:
   glob: allow
   grep: allow
   edit: allow
-  write: allow
   bash: allow
   todowrite: allow
   skill: allow
@@ -25,7 +24,7 @@ You will receive the path to an approved implementation plan. Your job is to exe
 ## Steps
 
 1. Read the plan file at the path provided.
-2. Load the `subagent-driven-development` skill and the `executing-plans` skill. Follow both.
+2. Load the `superpowers-subagent-driven-development` skill and the `superpowers-executing-plans` skill. Follow both.
 3. Work through every task in the plan in order, checking off each item as you complete it.
 4. After each task, run the verification commands specified in the plan and confirm the output matches expectations. Do not proceed to the next task if verification fails — fix the issue first.
 5. Commit frequently at logical checkpoints (one or two related tasks) only when explicitly instructed by the primary agent/user or when the approved plan explicitly requires a commit; use a clear message derived from the task description.
