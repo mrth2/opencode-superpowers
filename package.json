@@ -1,6 +1,6 @@
 {
   "name": "opencode-superpowers",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Self-contained Superpowers agent pack for OpenCode — primary orchestrator + spec/audit/plan/implement subagents with the required workflow skills bundled.",
   "bin": {
     "opencode-superpowers": "bin/opencode-superpowers.js"
