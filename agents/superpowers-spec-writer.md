@@ -1,7 +1,7 @@
 ---
 name: superpowers-spec-writer
 description: Writes the design spec document from an approved brainstorm. Invoked by the superpowers primary agent after design is approved.
-model: github-copilot/gpt-5.4
+model: __SUPERPOWERS_MODEL__
 mode: subagent
 hidden: true
 permission:

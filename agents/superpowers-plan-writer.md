@@ -1,7 +1,7 @@
 ---
 name: superpowers-plan-writer
 description: Writes the implementation plan from an approved spec. Invoked by the superpowers primary agent after the user confirms the spec.
-model: github-copilot/gpt-5.5
+model: __SUPERPOWERS_MODEL__
 mode: subagent
 hidden: true
 permission:
