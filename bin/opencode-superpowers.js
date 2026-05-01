@@ -7,12 +7,13 @@
 // installed files do not depend on npm cache paths remaining available.
 //
 // Usage:
-//   npx opencode-superpowers              # install agents and skills
-//   npx opencode-superpowers --profile default  # install the Copilot Pro-safe profile
-//   npx opencode-superpowers --profile premium  # install the premium profile
-//   npx opencode-superpowers --force      # overwrite existing entries
-//   npx opencode-superpowers --dry-run    # show what would happen
-//   npx opencode-superpowers --uninstall  # remove managed entries
+//   npx opencode-superpowers                        # auto-detect profile from opencode auth
+//   npx opencode-superpowers --profile copilot      # GitHub Copilot Pro/Pro+ tuned
+//   npx opencode-superpowers --profile copilot-lite # Copilot, no premium models
+//   npx opencode-superpowers --profile anthropic    # direct Anthropic API
+//   npx opencode-superpowers --force                # overwrite existing entries
+//   npx opencode-superpowers --dry-run              # show what would happen
+//   npx opencode-superpowers --uninstall            # remove managed entries
 
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");

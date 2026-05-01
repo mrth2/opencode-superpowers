@@ -5,7 +5,7 @@
 Built for people who:
 
 - use **OpenCode** as their CLI coding agent,
-- want a **Copilot Pro-safe default profile** or an optional premium profile,
+- want a smart-detected provider profile (GitHub Copilot or Anthropic) with each agent tuned to a sensible model,
 - and want the Superpowers workflow available through OpenCode agents with one install command.
 
 ## What's in the pack
@@ -31,7 +31,19 @@ The installer also installs the supported vendored skill set from `skills/`. Ski
 
 The vendored sources under `skills/<name>/` stay byte-identical to upstream `obra/superpowers`; the installer copies each skill to `~/.config/opencode/skills/superpowers-<name>/` and rewrites the SKILL.md `name:` field plus internal `superpowers:<skill>` cross-references during install. Lockfile verification (`npm run verify:skills`) continues to run against the upstream-faithful sources.
 
-The installer renders generated agent copies from the selected profile. The default profile is Copilot Pro-safe, and the premium profile is opt-in.
+The installer renders every agent's `model:` field from the selected profile. Without `--profile`, the installer auto-detects from `~/.local/share/opencode/auth.json` and prefers `copilot` when GitHub Copilot is authed, falling back to `anthropic` when only Anthropic is authed.
+
+### Profiles
+
+| Agent | `copilot` (default when Copilot is authed) | `copilot-lite` | `anthropic` |
+| --- | --- | --- | --- |
+| `superpowers` (main) | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-haiku-4-5` |
+| `superpowers-spec-writer` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+| `superpowers-spec-auditor` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
+| `superpowers-plan-writer` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
+| `superpowers-implementer` | `github-copilot/claude-sonnet-4.6` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+
+The `copilot` profile assumes that delegated subagent calls do not consume Copilot premium-request quota, so it uses top-tier reasoning models (GPT 5.5, Sonnet 4.6) for subagents while keeping the orchestrator on `gpt-5.4-mini`. Use `copilot-lite` if you want to avoid premium-tier model IDs entirely. The matrix lives in `scripts/install-profiles.json` and is easy to fork.
 
 ## What is not bundled
 
@@ -42,7 +54,7 @@ The vendored snapshot is pinned in `skills/superpowers.lock.json` with the upstr
 ## Prerequisites
 
 1. **OpenCode** installed and working.
-2. A **GitHub Copilot subscription** configured as a provider in OpenCode, unless you use the premium profile or edit the agent `model:` fields to use another provider.
+2. A provider configured in OpenCode that matches one of the bundled profiles: a **GitHub Copilot subscription** for the `copilot` / `copilot-lite` profiles, or **Anthropic API access** for the `anthropic` profile. The installer auto-detects which one to use; pass `--profile` to override.
 3. **Node.js 16 or newer** for the `npx` entrypoint and verification scripts.
 
 You do not need to install `obra/superpowers` separately for this agent pack; the required skills are bundled here.
@@ -52,9 +64,10 @@ You do not need to install `obra/superpowers` separately for this agent pack; th
 ### Option A - `npx` recommended for normal users
 
 ```sh
-npx opencode-superpowers
-npx opencode-superpowers --profile default
-npx opencode-superpowers --profile premium
+npx opencode-superpowers                        # auto-detect profile from opencode auth
+npx opencode-superpowers --profile copilot      # GitHub Copilot, premium-tier subagents
+npx opencode-superpowers --profile copilot-lite # Copilot, no premium-tier models
+npx opencode-superpowers --profile anthropic    # direct Anthropic API
 ```
 
 Packaged installs use copy mode automatically so installed files do not depend on npm cache paths remaining available.
@@ -63,8 +76,6 @@ Common flags:
 
 ```sh
 npx opencode-superpowers --dry-run     # preview only
-npx opencode-superpowers --profile default  # Copilot Pro-safe profile
-npx opencode-superpowers --profile premium  # opt-in premium profile
 npx opencode-superpowers --force       # overwrite conflicting unmanaged entries
 npx opencode-superpowers --uninstall   # remove entries recorded in the local manifest
 ```
@@ -77,18 +88,16 @@ cd ~/Code/opencode-superpowers
 ./scripts/install-opencode.sh
 ```
 
-Clone installs use symlink mode for most files, but the profile-specific main agent is rendered as a generated copy. Pulling the repo updates linked agent and skill content in place, and you should re-run the installer after `git pull` or a package refresh to reconcile generated files and managed entries.
+All five agents are always rendered from the source templates with the profile's model IDs substituted in, so agent files install as copies. Skills also install as copies (they are namespaced during install). Re-run the installer after `git pull` or a package refresh to reconcile generated files and managed entries.
 
 ### Install modes
 
-The installer chooses the mode automatically for agents:
+The `--mode` flag is informational only since this version: agents are always copy-installed (each is rendered with the profile's model IDs) and skills are always copy-installed (each is namespaced with `superpowers-` and has cross-references rewritten). The mode label is recorded in the manifest:
 
 - **Symlink mode** when the source has a `.git` directory or gitfile.
 - **Copy mode** when the source looks like a packaged install.
 
-Skills always install in copy mode regardless of the chosen mode, because each skill is rewritten during install to apply the `superpowers-` namespace and rename internal cross-references.
-
-For maintenance testing, the mode can be forced:
+The mode can still be forced for testing:
 
 ```sh
 ./scripts/install-opencode.sh --mode symlink
@@ -104,6 +113,7 @@ The installer respects:
 | `OPENCODE_AGENTS_DIR` | `~/.config/opencode/agents` | Where agent files are installed. |
 | `OPENCODE_SKILLS_DIR` | `~/.config/opencode/skills` | Where skill directories are installed. |
 | `OPENCODE_SUPERPOWERS_MANIFEST` | `~/.config/opencode/opencode-superpowers-install.json` | Local manifest used for safe update and uninstall. |
+| `OPENCODE_AUTH_FILE` | `${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json` | OpenCode auth file used for profile auto-detection. |
 
 ## Verify
 

@@ -1,0 +1,23 @@
+{
+  "copilot": {
+    "superpowers.md": "github-copilot/gpt-5.4-mini",
+    "superpowers-spec-writer.md": "github-copilot/gpt-5.4",
+    "superpowers-spec-auditor.md": "github-copilot/gpt-5.5",
+    "superpowers-plan-writer.md": "github-copilot/gpt-5.5",
+    "superpowers-implementer.md": "github-copilot/claude-sonnet-4.6"
+  },
+  "copilot-lite": {
+    "superpowers.md": "github-copilot/gpt-5.4-mini",
+    "superpowers-spec-writer.md": "github-copilot/gpt-5.4-mini",
+    "superpowers-spec-auditor.md": "github-copilot/gpt-5.4",
+    "superpowers-plan-writer.md": "github-copilot/gpt-5.4",
+    "superpowers-implementer.md": "github-copilot/gpt-5.4-mini"
+  },
+  "anthropic": {
+    "superpowers.md": "anthropic/claude-haiku-4-5",
+    "superpowers-spec-writer.md": "anthropic/claude-sonnet-4-6",
+    "superpowers-spec-auditor.md": "anthropic/claude-opus-4-7",
+    "superpowers-plan-writer.md": "anthropic/claude-opus-4-7",
+    "superpowers-implementer.md": "anthropic/claude-sonnet-4-6"
+  }
+}

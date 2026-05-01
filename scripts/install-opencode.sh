@@ -6,14 +6,16 @@
 # both sets together and records a local manifest for safe updates and uninstall.
 #
 # Usage:
-#   ./scripts/install-opencode.sh                  # install agents and skills
-#   ./scripts/install-opencode.sh --force          # overwrite conflicting entries
-#   ./scripts/install-opencode.sh --dry-run        # show planned changes only
-#   ./scripts/install-opencode.sh --uninstall      # remove managed entries
-#   ./scripts/install-opencode.sh --mode symlink   # force symlink mode
-#   ./scripts/install-opencode.sh --mode copy      # force copy mode
-#   ./scripts/install-opencode.sh --profile default # install default model profile
-#   ./scripts/install-opencode.sh --profile premium # install premium model profile
+#   ./scripts/install-opencode.sh                       # auto-detect profile from opencode auth
+#   ./scripts/install-opencode.sh --force               # overwrite conflicting entries
+#   ./scripts/install-opencode.sh --dry-run             # show planned changes only
+#   ./scripts/install-opencode.sh --uninstall           # remove managed entries
+#   ./scripts/install-opencode.sh --mode symlink        # force symlink mode (skills + agents always copy)
+#   ./scripts/install-opencode.sh --mode copy           # force copy mode
+#   ./scripts/install-opencode.sh --profile auto        # detect from ~/.local/share/opencode/auth.json
+#   ./scripts/install-opencode.sh --profile copilot     # GitHub Copilot Pro/Pro+ tuned (subagents use premium models)
+#   ./scripts/install-opencode.sh --profile copilot-lite # Copilot, no premium models (conservative)
+#   ./scripts/install-opencode.sh --profile anthropic   # direct Anthropic API (haiku/sonnet/opus)
 
 set -euo pipefail
 
@@ -30,7 +32,7 @@ FORCE=0
 DRY_RUN=0
 UNINSTALL=0
 MODE="auto"
-PROFILE="default"
+PROFILE="auto"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,14 +49,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --profile)
       PROFILE="${2:-}"
-      if [[ "$PROFILE" != "default" && "$PROFILE" != "premium" ]]; then
-        echo "error: unknown profile: $PROFILE" >&2
-        exit 2
-      fi
       shift 2
       ;;
     -h|--help)
-      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -94,22 +92,32 @@ select_mode() {
   fi
 }
 
-profile_model() {
-  case "$PROFILE" in
-    default) printf 'github-copilot/gpt-5.4-mini' ;;
-    premium) printf 'github-copilot/gpt-5.5' ;;
-    *)
-      echo "error: unknown profile: $PROFILE" >&2
-      exit 2
-      ;;
-  esac
+resolve_profile() {
+  local auth_file="${OPENCODE_AUTH_FILE:-${XDG_DATA_HOME:-$HOME/.local/share}/opencode/auth.json}"
+  if [[ "$PROFILE" == "auto" ]]; then
+    PROFILE="$(node "$REPO_ROOT/scripts/install-profile-lookup.mjs" --detect-profile "$auth_file")"
+    echo "profile  $PROFILE (auto-detected)"
+  else
+    echo "profile  $PROFILE"
+  fi
+  if ! node "$REPO_ROOT/scripts/install-profile-lookup.mjs" --list-profiles | grep -qx "$PROFILE"; then
+    echo "error: unknown profile: $PROFILE" >&2
+    exit 2
+  fi
 }
 
-render_superpowers_agent() {
+render_agent() {
   local src="$1"
   local dest="$2"
+  local agent_name="$3"
+  if [[ "$DRY_RUN" == 1 ]]; then
+    : > "$dest"
+    return 0
+  fi
   local model
-  model="$(profile_model)"
+  if ! model="$(node "$REPO_ROOT/scripts/install-profile-lookup.mjs" "$PROFILE" "$agent_name")"; then
+    return 1
+  fi
   awk -v model="$model" '
     /^model:[[:space:]]+/ {
       print "model: " model
@@ -259,21 +267,12 @@ has_unmanaged_conflict() {
 preflight_install_conflicts() {
   local mode="$1"
   while IFS= read -r -d '' src; do
-    local name dest entry_mode rendered_src
+    local name dest
     name="$(basename "$src")"
     dest="$AGENTS_DEST/$name"
-    entry_mode="$mode"
-    rendered_src="$src"
-    if [[ "$name" == "superpowers.md" ]]; then
-      rendered_src="$(mktemp "${TMPDIR:-/tmp}/opencode-superpowers-agent.XXXXXX")"
-      render_superpowers_agent "$src" "$rendered_src"
-      entry_mode="copy"
-    fi
-    if has_unmanaged_conflict "$entry_mode" "$rendered_src" "$dest"; then
-      [[ "$rendered_src" != "$src" ]] && rm -f "$rendered_src"
+    if has_unmanaged_conflict "copy" "$src" "$dest"; then
       return 10
     fi
-    [[ "$rendered_src" != "$src" ]] && rm -f "$rendered_src"
   done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
 
   while IFS= read -r -d '' src; do
@@ -326,6 +325,7 @@ NODE
 
 install_all() {
   validate_sources
+  resolve_profile
   local mode installed_count skipped_count
   mode="$(select_mode)"
   installed_count=0
@@ -340,25 +340,22 @@ install_all() {
 
   local installed_paths=()
   while IFS= read -r -d '' src; do
-    local name dest entry_mode rendered_src
+    local name dest rendered_src
     name="$(basename "$src")"
     dest="$AGENTS_DEST/$name"
-    entry_mode="$mode"
-    rendered_src="$src"
-    if [[ "$name" == "superpowers.md" ]]; then
-      rendered_src="$(mktemp "${TMPDIR:-/tmp}/opencode-superpowers-agent.XXXXXX")"
-      render_superpowers_agent "$src" "$rendered_src"
-      entry_mode="copy"
+    rendered_src="$(mktemp "${TMPDIR:-/tmp}/opencode-superpowers-agent.XXXXXX")"
+    if ! render_agent "$src" "$rendered_src" "$name"; then
+      rm -f "$rendered_src"
+      skipped_count=$((skipped_count+1))
+      continue
     fi
-    if install_one "$entry_mode" "$rendered_src" "$dest" "agent $name"; then
+    if install_one "copy" "$rendered_src" "$dest" "agent $name"; then
       installed_paths+=("$dest")
       installed_count=$((installed_count+1))
     else
       skipped_count=$((skipped_count+1))
     fi
-    if [[ "$rendered_src" != "$src" ]]; then
-      rm -f "$rendered_src"
-    fi
+    rm -f "$rendered_src"
   done < <(find "$AGENTS_SRC" -maxdepth 1 -type f -name '*.md' -print0)
 
   while IFS= read -r -d '' src; do

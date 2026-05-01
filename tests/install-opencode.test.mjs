@@ -9,6 +9,14 @@ import { fileURLToPath } from "node:url";
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const installScript = path.join(repoRoot, "scripts", "install-opencode.sh");
 
+const AGENT_FILES = [
+  "superpowers.md",
+  "superpowers-spec-writer.md",
+  "superpowers-spec-auditor.md",
+  "superpowers-plan-writer.md",
+  "superpowers-implementer.md",
+];
+
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "opencode-superpowers-install-test-"));
 }
@@ -31,21 +39,34 @@ function runInstaller(args, { env, cwd = repoRoot } = {}) {
   });
 }
 
+function envFor(tempHome, extra = {}) {
+  return {
+    ...process.env,
+    HOME: tempHome,
+    OPENCODE_AGENTS_DIR: path.join(tempHome, "agents"),
+    OPENCODE_SKILLS_DIR: path.join(tempHome, "skills"),
+    OPENCODE_SUPERPOWERS_MANIFEST: path.join(tempHome, "manifest.json"),
+    OPENCODE_AUTH_FILE: path.join(tempHome, "no-such-auth.json"),
+    ...extra,
+  };
+}
+
+function readModel(agentsDir, name) {
+  const content = fs.readFileSync(path.join(agentsDir, name), "utf8");
+  const match = content.match(/^model:\s+(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+
 test("installer dry-run succeeds on portability shims", () => {
   const tempHome = makeTempDir();
   const tempBin = path.join(tempHome, "bin");
   fs.mkdirSync(tempBin, { recursive: true });
   writePortabilitySortShim(tempBin);
-  const env = {
-    ...process.env,
-    HOME: tempHome,
+  const env = envFor(tempHome, {
     PATH: `${tempBin}:${process.env.PATH}`,
-    OPENCODE_AGENTS_DIR: path.join(tempHome, "agents"),
-    OPENCODE_SKILLS_DIR: path.join(tempHome, "skills"),
-    OPENCODE_SUPERPOWERS_MANIFEST: path.join(tempHome, "manifest.json"),
-  };
+  });
 
-  const output = execFileSync("bash", [installScript, "--dry-run"], {
+  const output = execFileSync("bash", [installScript, "--dry-run", "--profile", "copilot"], {
     cwd: repoRoot,
     env,
     encoding: "utf8",
@@ -53,64 +74,131 @@ test("installer dry-run succeeds on portability shims", () => {
   });
 
   assert.match(output, /mode\s+symlink|mode\s+copy/);
+  assert.match(output, /profile\s+copilot/);
   assert.match(output, /\[dry-run\] mkdir -p/);
 });
 
-test("default profile installs gpt-5.4-mini", () => {
+test("copilot profile renders the expected model on every agent", () => {
   const tempHome = makeTempDir();
-  const agentsDir = path.join(tempHome, "agents");
-  const env = {
-    ...process.env,
-    HOME: tempHome,
-    OPENCODE_AGENTS_DIR: agentsDir,
-    OPENCODE_SKILLS_DIR: path.join(tempHome, "skills"),
-    OPENCODE_SUPERPOWERS_MANIFEST: path.join(tempHome, "manifest.json"),
-  };
-  const agentPath = path.join(agentsDir, "superpowers.md");
+  const env = envFor(tempHome);
+  const agentsDir = env.OPENCODE_AGENTS_DIR;
 
-  const defaultInstall = runInstaller(["--profile", "default"], { env });
-  assert.equal(defaultInstall.status, 0, defaultInstall.stderr || defaultInstall.stdout);
-  assert.match(fs.readFileSync(agentPath, "utf8"), /model:\s+github-copilot\/gpt-5\.4-mini/);
+  const result = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  for (const name of AGENT_FILES) {
+    const model = readModel(agentsDir, name);
+    assert.ok(model, `${name} missing model field`);
+    assert.notEqual(model, "__SUPERPOWERS_MODEL__", `${name} placeholder not rendered`);
+  }
+  assert.equal(readModel(agentsDir, "superpowers.md"), "github-copilot/gpt-5.4-mini");
+  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "github-copilot/gpt-5.4");
+  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "github-copilot/gpt-5.5");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "github-copilot/gpt-5.5");
+  assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/claude-sonnet-4.6");
 });
 
-test("premium profile overwrites an existing conflicting agent file only when --force is used", () => {
+test("copilot-lite profile uses no premium model IDs", () => {
+  const tempHome = makeTempDir();
+  const env = envFor(tempHome);
+  const agentsDir = env.OPENCODE_AGENTS_DIR;
+
+  const result = runInstaller(["--profile", "copilot-lite"], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  assert.equal(readModel(agentsDir, "superpowers.md"), "github-copilot/gpt-5.4-mini");
+  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "github-copilot/gpt-5.4-mini");
+  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "github-copilot/gpt-5.4");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "github-copilot/gpt-5.4");
+  assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/gpt-5.4-mini");
+});
+
+test("anthropic profile uses the anthropic provider on every agent", () => {
+  const tempHome = makeTempDir();
+  const env = envFor(tempHome);
+  const agentsDir = env.OPENCODE_AGENTS_DIR;
+
+  const result = runInstaller(["--profile", "anthropic"], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  assert.equal(readModel(agentsDir, "superpowers.md"), "anthropic/claude-haiku-4-5");
+  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "anthropic/claude-sonnet-4-6");
+  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "anthropic/claude-opus-4-7");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "anthropic/claude-opus-4-7");
+  assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "anthropic/claude-sonnet-4-6");
+});
+
+test("auto-detect picks copilot when github-copilot is in opencode auth", () => {
+  const tempHome = makeTempDir();
+  const authFile = path.join(tempHome, "auth.json");
+  fs.writeFileSync(authFile, JSON.stringify({ "github-copilot": { ok: 1 }, anthropic: { ok: 1 } }));
+  const env = envFor(tempHome, { OPENCODE_AUTH_FILE: authFile });
+  const agentsDir = env.OPENCODE_AGENTS_DIR;
+
+  const result = runInstaller([], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /profile\s+copilot \(auto-detected\)/);
+  assert.equal(readModel(agentsDir, "superpowers.md"), "github-copilot/gpt-5.4-mini");
+  assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/claude-sonnet-4.6");
+});
+
+test("auto-detect picks anthropic when only anthropic is authed", () => {
+  const tempHome = makeTempDir();
+  const authFile = path.join(tempHome, "auth.json");
+  fs.writeFileSync(authFile, JSON.stringify({ anthropic: { ok: 1 } }));
+  const env = envFor(tempHome, { OPENCODE_AUTH_FILE: authFile });
+  const agentsDir = env.OPENCODE_AGENTS_DIR;
+
+  const result = runInstaller([], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /profile\s+anthropic \(auto-detected\)/);
+  assert.equal(readModel(agentsDir, "superpowers.md"), "anthropic/claude-haiku-4-5");
+});
+
+test("auto-detect falls back to copilot with a warning when no auth file", () => {
+  const tempHome = makeTempDir();
+  const env = envFor(tempHome, { OPENCODE_AUTH_FILE: path.join(tempHome, "missing.json") });
+
+  const result = runInstaller([], { env });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stderr, /opencode auth file not found/);
+  assert.match(result.stdout, /profile\s+copilot \(auto-detected\)/);
+});
+
+test("anthropic profile overwrites an existing conflicting agent file only when --force is used", () => {
   const tempHome = makeTempDir();
   const agentsDir = path.join(tempHome, "agents with space");
   const skillsDir = path.join(tempHome, "skills with space");
   const manifestPath = path.join(tempHome, "manifest.json");
-  const env = {
-    ...process.env,
-    HOME: tempHome,
+  const env = envFor(tempHome, {
     OPENCODE_AGENTS_DIR: agentsDir,
     OPENCODE_SKILLS_DIR: skillsDir,
     OPENCODE_SUPERPOWERS_MANIFEST: manifestPath,
-  };
+  });
   const agentPath = path.join(agentsDir, "superpowers.md");
 
   fs.mkdirSync(agentsDir, { recursive: true });
   fs.writeFileSync(agentPath, "conflicting contents\n", "utf8");
 
-  const premiumInstall = runInstaller(["--profile", "premium"], { env });
-  assert.notEqual(premiumInstall.status, 0);
-  assert.match(`${premiumInstall.stdout}\n${premiumInstall.stderr}`, /error: .*superpowers\.md/i);
+  const conflictingInstall = runInstaller(["--profile", "anthropic"], { env });
+  assert.notEqual(conflictingInstall.status, 0);
+  assert.match(`${conflictingInstall.stdout}\n${conflictingInstall.stderr}`, /error: .*superpowers\.md/i);
   assert.equal(fs.readFileSync(agentPath, "utf8"), "conflicting contents\n");
 
-  const forcedPremiumInstall = runInstaller(["--profile", "premium", "--force"], { env });
-  assert.equal(forcedPremiumInstall.status, 0, forcedPremiumInstall.stderr || forcedPremiumInstall.stdout);
-  assert.match(fs.readFileSync(agentPath, "utf8"), /model:\s+github-copilot\/gpt-5\.5/);
+  const forced = runInstaller(["--profile", "anthropic", "--force"], { env });
+  assert.equal(forced.status, 0, forced.stderr || forced.stdout);
+  assert.match(fs.readFileSync(agentPath, "utf8"), /model:\s+anthropic\/claude-haiku-4-5/);
 });
 
 test("installer handles spaced destination paths", () => {
   const tempHome = makeTempDir();
-  const env = {
-    ...process.env,
-    HOME: tempHome,
+  const env = envFor(tempHome, {
     OPENCODE_AGENTS_DIR: path.join(tempHome, "agents with spaces"),
     OPENCODE_SKILLS_DIR: path.join(tempHome, "skills with spaces"),
     OPENCODE_SUPERPOWERS_MANIFEST: path.join(tempHome, "manifest with spaces.json"),
-  };
+  });
 
-  const install = runInstaller(["--profile", "default"], { env });
+  const install = runInstaller(["--profile", "copilot"], { env });
   assert.equal(install.status, 0, install.stderr || install.stdout);
   assert.match(fs.readFileSync(path.join(env.OPENCODE_AGENTS_DIR, "superpowers.md"), "utf8"), /model:\s+github-copilot\/gpt-5\.4-mini/);
 });
@@ -120,17 +208,15 @@ test("uninstall removes the agent file, manifest, and at least one installed ski
   const agentsDir = path.join(tempHome, "agents");
   const skillsDir = path.join(tempHome, "skills");
   const manifestPath = path.join(tempHome, "manifest.json");
-  const env = {
-    ...process.env,
-    HOME: tempHome,
+  const env = envFor(tempHome, {
     OPENCODE_AGENTS_DIR: agentsDir,
     OPENCODE_SKILLS_DIR: skillsDir,
     OPENCODE_SUPERPOWERS_MANIFEST: manifestPath,
-  };
+  });
   const agentPath = path.join(agentsDir, "superpowers.md");
   const installedSkillPath = path.join(skillsDir, "superpowers-using-superpowers", "SKILL.md");
 
-  const install = runInstaller(["--profile", "default"], { env });
+  const install = runInstaller(["--profile", "copilot"], { env });
   assert.equal(install.status, 0, install.stderr || install.stdout);
   assert.equal(fs.existsSync(agentPath), true);
   assert.equal(fs.existsSync(manifestPath), true);
@@ -163,13 +249,7 @@ test("uninstall removes the agent file, manifest, and at least one installed ski
 
 test("invalid profile rejects with error: unknown profile: nope", () => {
   const tempHome = makeTempDir();
-  const env = {
-    ...process.env,
-    HOME: tempHome,
-    OPENCODE_AGENTS_DIR: path.join(tempHome, "agents"),
-    OPENCODE_SKILLS_DIR: path.join(tempHome, "skills"),
-    OPENCODE_SUPERPOWERS_MANIFEST: path.join(tempHome, "manifest.json"),
-  };
+  const env = envFor(tempHome);
 
   const unknownProfile = runInstaller(["--profile", "nope"], { env });
   assert.notEqual(unknownProfile.status, 0);
