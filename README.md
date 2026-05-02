@@ -20,7 +20,7 @@ Five OpenCode agents are installed from `agents/`:
 | `superpowers-plan-writer` | subagent | Turns an approved spec into an executable implementation plan. |
 | `superpowers-implementer` | subagent | Executes the approved plan task-by-task with verification gates. |
 
-The installer also installs the supported vendored skill set from `skills/`. Skills are installed under a `superpowers-` prefix so the bundled workflow can be scoped via a single wildcard rule in `opencode.json` and does not bleed into other primary agents (`build`, `plan`, etc.):
+The installer also installs the supported vendored skill set from `skills/`. Skills are installed under a `superpowers-` prefix, and their installed `description:` metadata is rewritten to explicitly scope usage to `superpowers-*` agents. Combined with a wildcard rule in `opencode.json`, this prevents bleed into other primary agents (`build`, `plan`, etc.):
 
 - `superpowers-using-superpowers`
 - `superpowers-brainstorming`
@@ -150,9 +150,12 @@ ok vendored skills verified:
 
 ## Restricting skills to the superpowers agents
 
-OpenCode filesystem skills at `~/.config/opencode/skills/` are visible to every primary agent that has `skill: allow` (the default `build` and `plan` agents included). Without scoping, a built-in `build` or `plan` session can auto-trigger `superpowers-brainstorming`, `superpowers-writing-plans`, etc., based on their assertive descriptions.
+OpenCode filesystem skills at `~/.config/opencode/skills/` are visible to every agent that can use the `skill` tool. Because users may have many built-in/custom agents (`build`, `plan`, `task`, project-specific agents, etc.), the safest isolation pattern is:
 
-Because every bundled skill installs under the `superpowers-` prefix, you can isolate them with one wildcard rule in `~/.config/opencode/opencode.json`: deny `superpowers-*` globally, then allow it for each `superpowers*` agent. Per [OpenCode's skill permissions](https://opencode.ai/docs/skills/), `deny` hides the skill from the agent entirely (auto-trigger and slash invocation alike) — when you want to run the workflow, switch to the `superpowers` agent.
+1. global deny for `superpowers-*` skills,
+2. per-agent allow override only for `superpowers*` agents.
+
+This follows [configure permissions](https://opencode.ai/docs/skills/#configure-permissions) + [override per agent](https://opencode.ai/docs/skills/#override-per-agent):
 
 ```json
 {
@@ -181,6 +184,8 @@ Because every bundled skill installs under the `superpowers-` prefix, you can is
   }
 }
 ```
+
+This catches unknown/future agents automatically, without needing to enumerate them. The metadata layer from this package (installed descriptions narrowed to `superpowers-*` workflow usage) improves trigger quality, but this permission setup is the hard enforcement that prevents cross-agent bleed.
 
 This snippet is opt-in. The installer does not modify your `opencode.json`.
 

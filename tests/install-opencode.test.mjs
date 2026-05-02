@@ -57,6 +57,10 @@ function readModel(agentsDir, name) {
   return match ? match[1].trim() : null;
 }
 
+function readAgent(agentsDir, name) {
+  return fs.readFileSync(path.join(agentsDir, name), "utf8");
+}
+
 test("installer dry-run succeeds on portability shims", () => {
   const tempHome = makeTempDir();
   const tempBin = path.join(tempHome, "bin");
@@ -96,6 +100,16 @@ test("copilot profile renders the expected model on every agent", () => {
   assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "github-copilot/gpt-5.5");
   assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "github-copilot/gpt-5.5");
   assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/claude-sonnet-4.6");
+
+  const superpowersContent = readAgent(agentsDir, "superpowers.md");
+  assert.match(superpowersContent, /^\s{4}"git \*":\s+allow\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git push\*":\s+ask\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git pull\*":\s+ask\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git merge \*":\s+ask\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git rebase\*":\s+ask\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git reset\*":\s+ask\s*$/m);
+  assert.match(superpowersContent, /^\s{4}"git clean\*":\s+ask\s*$/m);
+
 });
 
 test("copilot-lite profile uses no premium model IDs", () => {
@@ -225,11 +239,19 @@ test("uninstall removes the agent file, manifest, and at least one installed ski
     fs.readFileSync(installedSkillPath, "utf8"),
     /^name:\s+superpowers-using-superpowers\s*$/m,
   );
+  assert.match(
+    fs.readFileSync(installedSkillPath, "utf8"),
+    /^description:\s+Superpowers workflow scope only\. Use inside superpowers-\* agents to establish skill usage discipline for that workflow\.\s*$/m,
+  );
   const installedBrainstormingSkillMd = path.join(skillsDir, "superpowers-brainstorming", "SKILL.md");
   assert.equal(fs.existsSync(installedBrainstormingSkillMd), true);
   assert.match(
     fs.readFileSync(installedBrainstormingSkillMd, "utf8"),
     /^name:\s+superpowers-brainstorming\s*$/m,
+  );
+  assert.match(
+    fs.readFileSync(installedBrainstormingSkillMd, "utf8"),
+    /^description:\s+Superpowers workflow scope only\. Use inside superpowers-\* agents before design\/spec\/implementation work\.\s*$/m,
   );
   const installedExecutingSkillMd = path.join(skillsDir, "superpowers-executing-plans", "SKILL.md");
   assert.equal(fs.existsSync(installedExecutingSkillMd), true);

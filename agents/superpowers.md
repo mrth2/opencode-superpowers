@@ -14,15 +14,16 @@ permission:
   skill: allow
   edit: ask
   bash:
-    "git status": allow
-    "git status *": allow
-    "git log *": allow
-    "git diff *": allow
-    "git show *": allow
-    "git branch": allow
-    "git branch *": allow
-    "git rev-parse *": allow
-    "git remote -v": allow
+    "git *": allow
+    "git push*": ask
+    "git pull*": ask
+    "git merge *": ask
+    "git rebase*": ask
+    "git cherry-pick*": ask
+    "git reset*": ask
+    "git clean*": ask
+    "git checkout *": ask
+    "git restore *": ask
     "ls": allow
     "ls *": allow
     "*": ask

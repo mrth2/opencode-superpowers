@@ -23,6 +23,21 @@ const REQUIRED_SKILLS = [
   "verification-before-completion",
 ];
 
+const DESCRIPTION_OVERRIDES = {
+  "using-superpowers":
+    "Superpowers workflow scope only. Use inside superpowers-* agents to establish skill usage discipline for that workflow.",
+  brainstorming:
+    "Superpowers workflow scope only. Use inside superpowers-* agents before design/spec/implementation work.",
+  "writing-plans":
+    "Superpowers workflow scope only. Use inside superpowers-* agents after approved spec to write implementation plans.",
+  "subagent-driven-development":
+    "Superpowers workflow scope only. Use inside superpowers-* agents when executing implementation plans with delegated tasks.",
+  "executing-plans":
+    "Superpowers workflow scope only. Use inside superpowers-* agents when carrying out an approved implementation plan.",
+  "verification-before-completion":
+    "Superpowers workflow scope only. Use inside superpowers-* agents before any completion or success claim.",
+};
+
 function parseArgs(argv) {
   const args = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -74,6 +89,19 @@ function rewriteFrontmatterName(text, originalName, newName) {
   return `${open}${newBody}${close}${text.slice(fmMatch[0].length)}`;
 }
 
+function rewriteFrontmatterDescription(text, originalName) {
+  const description = DESCRIPTION_OVERRIDES[originalName];
+  if (!description) return text;
+  const fmMatch = text.match(/^(---\r?\n)([\s\S]*?)(\r?\n---\r?\n)/);
+  if (!fmMatch) return text;
+  const [, open, body, close] = fmMatch;
+  const descriptionLineRegex = /^description:\s*.*$/m;
+  const nextBody = descriptionLineRegex.test(body)
+    ? body.replace(descriptionLineRegex, `description: ${description}`)
+    : `${body.trimEnd()}\ndescription: ${description}`;
+  return `${open}${nextBody}${close}${text.slice(fmMatch[0].length)}`;
+}
+
 function rewriteCrossReferences(text) {
   let out = text;
   for (const skill of REQUIRED_SKILLS) {
@@ -93,6 +121,7 @@ function transformMarkdownTree(dir, originalName, newName) {
     if (!entry.isFile() || !full.toLowerCase().endsWith(".md")) continue;
     let content = fs.readFileSync(full, "utf8");
     content = rewriteFrontmatterName(content, originalName, newName);
+    content = rewriteFrontmatterDescription(content, originalName);
     content = rewriteCrossReferences(content);
     fs.writeFileSync(full, content);
   }
