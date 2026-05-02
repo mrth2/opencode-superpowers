@@ -16,6 +16,8 @@
   "scripts": {
     "install-agents": "bash scripts/install-opencode.sh",
     "install-opencode": "bash scripts/install-opencode.sh",
+    "release:check": "node scripts/release-check.mjs",
+    "release:apply": "node scripts/release-check.mjs --apply",
     "verify:skills": "node scripts/verify-vendored-skills.mjs",
     "sync:skills": "node scripts/sync-superpowers-skills.mjs",
     "test:sync": "node --test tests/sync-superpowers-skills.test.mjs",
