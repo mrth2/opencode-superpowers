@@ -5,6 +5,9 @@
 # KeepGoing local state
 .keepgoing/
 
+# Documentation drafts
+docs/
+
 # Worktrees
 .worktrees/
 
