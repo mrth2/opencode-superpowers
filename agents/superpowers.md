@@ -14,6 +14,9 @@ permission:
   skill: allow
   edit: ask
   bash:
+    "*": ask
+    "ls": allow
+    "ls *": allow
     "git *": allow
     "git push*": ask
     "git pull*": ask
@@ -24,9 +27,6 @@ permission:
     "git clean*": ask
     "git checkout *": ask
     "git restore *": ask
-    "ls": allow
-    "ls *": allow
-    "*": ask
   task:
     "*": deny
     "superpowers-spec-writer": allow

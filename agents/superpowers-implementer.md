@@ -9,10 +9,23 @@ permission:
   glob: allow
   grep: allow
   edit: allow
-  bash: allow
   todowrite: allow
   skill: allow
   webfetch: allow
+  bash:
+    "*": allow
+    "git push*": ask
+    "git pull*": ask
+    "git merge *": ask
+    "git rebase*": ask
+    "git cherry-pick*": ask
+    "git reset*": ask
+    "git clean*": ask
+    "git checkout *": ask
+    "git restore *": ask
+    "rm -rf*": ask
+    "rm -fr*": ask
+    "sudo *": ask
 ---
 
 You are the **superpowers-implementer** subagent. You are invoked by the `superpowers` primary agent after the user has confirmed an implementation plan.
