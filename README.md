@@ -1,6 +1,6 @@
 # opencode-superpowers
 
-> **OpenCode-only** agent pack that bundles the supported [Superpowers](https://github.com/obra/superpowers) workflow skills with a primary orchestrator and four specialized subagents.
+> **OpenCode-only** agent pack that bundles the supported [Superpowers](https://github.com/obra/superpowers) workflow skills with a primary orchestrator and five specialized subagents.
 
 Built for people who:
 
@@ -10,15 +10,15 @@ Built for people who:
 
 ## What's in the pack
 
-Five OpenCode agents are installed from `agents/`:
+Six OpenCode agents are installed from `agents/`:
 
 | Agent | Mode | Purpose |
 | --- | --- | --- |
-| `superpowers` | primary | Orchestrator. Brainstorms, then delegates spec / audit / plan / implement. Enforces the skill-first workflow. |
-| `superpowers-spec-writer` | subagent | Writes the design spec from an approved brainstorm. |
-| `superpowers-spec-auditor` | subagent | Audits a written spec for ambiguity, contradictions, scope creep. |
-| `superpowers-plan-writer` | subagent | Turns an approved spec into an executable implementation plan. |
-| `superpowers-implementer` | subagent | Executes the approved plan task-by-task with verification gates. |
+| `superpowers` | primary | Orchestrator. Brainstorms, then delegates spec / plan / implement / review. Tracks plan status and coordination commits. |
+| `superpowers-spec-writer` | subagent | Writes the design spec from an approved brainstorm, then self-audits it. |
+| `superpowers-plan-writer` | subagent | Turns an approved spec into an executable implementation plan, then self-audits it. |
+| `superpowers-implementer` | subagent | Executes the approved plan task-by-task with verification, review handoff, and per-task commits. |
+| `superpowers-code-reviewer` | subagent | Reviews one completed implementation task before the implementer finalizes it. |
 
 The installer also installs the supported vendored skill set from `skills/`. Skills are installed under a `superpowers-` prefix, and their installed `description:` metadata is rewritten to explicitly scope usage to `superpowers-*` agents. Combined with a wildcard rule in `opencode.json`, this prevents bleed into other primary agents (`build`, `plan`, etc.):
 
@@ -38,10 +38,10 @@ The installer renders every agent's `model:` field from the selected profile. Wi
 | Agent | `copilot` (default when Copilot is authed) | `copilot-lite` | `anthropic` |
 | --- | --- | --- | --- |
 | `superpowers` (main) | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-haiku-4-5` |
-| `superpowers-spec-writer` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
-| `superpowers-spec-auditor` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
-| `superpowers-plan-writer` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
+| `superpowers-spec-writer` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+| `superpowers-plan-writer` | `anthropic/claude-opus-4-7` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
 | `superpowers-implementer` | `github-copilot/claude-sonnet-4.6` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+| `superpowers-code-reviewer` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4` |
 
 The `copilot` profile assumes that delegated subagent calls do not consume Copilot premium-request quota, so it uses top-tier reasoning models (GPT 5.5, Sonnet 4.6) for subagents while keeping the orchestrator on `gpt-5.4-mini`. Use `copilot-lite` if you want to avoid premium-tier model IDs entirely. The matrix lives in `scripts/install-profiles.json` and is easy to fork.
 
@@ -88,7 +88,7 @@ cd ~/Code/opencode-superpowers
 ./scripts/install-opencode.sh
 ```
 
-All five agents are always rendered from the source templates with the profile's model IDs substituted in, so agent files install as copies. Skills also install as copies (they are namespaced during install). Re-run the installer after `git pull` or a package refresh to reconcile generated files and managed entries.
+All six agents are always rendered from the source templates with the profile's model IDs substituted in, so agent files install as copies. Skills also install as copies (they are namespaced during install). Re-run the installer after `git pull` or a package refresh to reconcile generated files and managed entries.
 
 ### Install modes
 
@@ -117,13 +117,13 @@ The installer respects:
 
 ## Verify
 
-After installing, restart OpenCode. You should see the five agents and six skills:
+After installing, restart OpenCode. You should see the six agents and six skills:
 
 ```sh
 ls ~/.config/opencode/agents/
+# superpowers-code-reviewer.md
 # superpowers-implementer.md
 # superpowers-plan-writer.md
-# superpowers-spec-auditor.md
 # superpowers-spec-writer.md
 # superpowers.md
 
@@ -172,13 +172,13 @@ This follows [configure permissions](https://opencode.ai/docs/skills/#configure-
     "superpowers-spec-writer": {
       "permission": { "skill": { "superpowers-*": "allow" } }
     },
-    "superpowers-spec-auditor": {
-      "permission": { "skill": { "superpowers-*": "allow" } }
-    },
     "superpowers-plan-writer": {
       "permission": { "skill": { "superpowers-*": "allow" } }
     },
     "superpowers-implementer": {
+      "permission": { "skill": { "superpowers-*": "allow" } }
+    },
+    "superpowers-code-reviewer": {
       "permission": { "skill": { "superpowers-*": "allow" } }
     }
   }

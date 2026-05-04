@@ -12,9 +12,9 @@ const installScript = path.join(repoRoot, "scripts", "install-opencode.sh");
 const AGENT_FILES = [
   "superpowers.md",
   "superpowers-spec-writer.md",
-  "superpowers-spec-auditor.md",
   "superpowers-plan-writer.md",
   "superpowers-implementer.md",
+  "superpowers-code-reviewer.md",
 ];
 
 function makeTempDir() {
@@ -96,10 +96,10 @@ test("copilot profile renders the expected model on every agent", () => {
     assert.notEqual(model, "__SUPERPOWERS_MODEL__", `${name} placeholder not rendered`);
   }
   assert.equal(readModel(agentsDir, "superpowers.md"), "github-copilot/gpt-5.4-mini");
-  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "github-copilot/gpt-5.4");
-  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "github-copilot/gpt-5.5");
-  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "github-copilot/gpt-5.5");
+  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "github-copilot/gpt-5.5");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "anthropic/claude-opus-4-7");
   assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/claude-sonnet-4.6");
+  assert.equal(readModel(agentsDir, "superpowers-code-reviewer.md"), "github-copilot/gpt-5.4");
 
   const superpowersContent = readAgent(agentsDir, "superpowers.md");
   assert.match(superpowersContent, /^\s{4}"git \*":\s+allow\s*$/m);
@@ -122,9 +122,9 @@ test("copilot-lite profile uses no premium model IDs", () => {
 
   assert.equal(readModel(agentsDir, "superpowers.md"), "github-copilot/gpt-5.4-mini");
   assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "github-copilot/gpt-5.4-mini");
-  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "github-copilot/gpt-5.4");
   assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "github-copilot/gpt-5.4");
   assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "github-copilot/gpt-5.4-mini");
+  assert.equal(readModel(agentsDir, "superpowers-code-reviewer.md"), "github-copilot/gpt-5.4-mini");
 });
 
 test("anthropic profile uses the anthropic provider on every agent", () => {
@@ -137,9 +137,9 @@ test("anthropic profile uses the anthropic provider on every agent", () => {
 
   assert.equal(readModel(agentsDir, "superpowers.md"), "anthropic/claude-haiku-4-5");
   assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "anthropic/claude-sonnet-4-6");
-  assert.equal(readModel(agentsDir, "superpowers-spec-auditor.md"), "anthropic/claude-opus-4-7");
   assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "anthropic/claude-opus-4-7");
   assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "anthropic/claude-sonnet-4-6");
+  assert.equal(readModel(agentsDir, "superpowers-code-reviewer.md"), "github-copilot/gpt-5.4");
 });
 
 test("auto-detect picks copilot when github-copilot is in opencode auth", () => {
