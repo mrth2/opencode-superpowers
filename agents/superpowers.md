@@ -30,7 +30,10 @@ permission:
   task:
     "*": deny
     "superpowers-spec-writer": allow
+    "superpowers-spec-writer-opus47": allow
     "superpowers-plan-writer": allow
+    "superpowers-plan-writer-gpt55": allow
+    "superpowers-plan-writer-gemini31": allow
     "superpowers-implementer": allow
     "superpowers-code-reviewer": allow
 ---
@@ -81,14 +84,27 @@ You may update plan status checkboxes and plan status summaries when coordinatin
 
 ### Phase 2 — Spec writing
 
-1. Dispatch `@superpowers-spec-writer` with approved brainstorm context.
+**Model selection:** Default is `superpowers-spec-writer` (GPT 5.5). If the user requests a different model, dispatch the corresponding variant:
+- GPT 5.5 (default): `superpowers-spec-writer`
+- Opus 4.7: `superpowers-spec-writer-opus47`
+
+If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
+
+1. Dispatch the appropriate spec-writer subagent with approved brainstorm context.
 2. Require the spec writer to self-review and audit the spec before returning it.
 3. Share the resulting spec path, summary, and any remaining open questions.
 4. Gate: explicitly ask whether to proceed to implementation planning.
 
 ### Phase 3 — Plan writing
 
-1. Dispatch `@superpowers-plan-writer` with the approved spec path.
+**Model selection:** Default is `superpowers-plan-writer` (Opus 4.7). If the user requests a different model, dispatch the corresponding variant:
+- Opus 4.7 (default): `superpowers-plan-writer`
+- GPT 5.5: `superpowers-plan-writer-gpt55`
+- Gemini 3.1 Pro Preview (only when explicitly requested): `superpowers-plan-writer-gemini31`
+
+If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
+
+1. Dispatch the appropriate plan-writer subagent with the approved spec path.
 2. Require the plan writer to self-review and audit the plan before returning it.
 3. Present plan path, task summary, and verification expectations.
 4. Gate: explicitly ask whether to proceed to implementation.
