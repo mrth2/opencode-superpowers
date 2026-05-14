@@ -1,6 +1,6 @@
 ---
-name: superpowers-plan-writer-gpt55
-description: Writes the implementation plan from an approved spec using GPT 5.5. Invoked by the superpowers primary agent when the user requests GPT 5.5 for plan writing.
+name: superpowers-plan-writer-gpt
+description: Writes the implementation plan from an approved spec using GPT via GitHub Copilot. Invoked by the superpowers primary agent when the user requests GPT for plan writing.
 model: github-copilot/gpt-5.5
 mode: subagent
 hidden: true

@@ -1,7 +1,7 @@
 ---
-name: superpowers-plan-writer-gemini31
-description: Writes the implementation plan from an approved spec using Gemini 3.1 Pro Preview. Invoked by the superpowers primary agent only when the user explicitly requests Gemini for plan writing.
-model: google/gemini-3.1-pro-preview
+name: superpowers-plan-writer-gemini
+description: Writes the implementation plan from an approved spec using Gemini via GitHub Copilot. Invoked by the superpowers primary agent only when the user explicitly requests Gemini for plan writing.
+model: github-copilot/gemini-3.1-pro-preview
 mode: subagent
 hidden: true
 permission:

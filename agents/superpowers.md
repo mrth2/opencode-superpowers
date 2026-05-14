@@ -30,10 +30,9 @@ permission:
   task:
     "*": deny
     "superpowers-spec-writer": allow
-    "superpowers-spec-writer-opus47": allow
     "superpowers-plan-writer": allow
-    "superpowers-plan-writer-gpt55": allow
-    "superpowers-plan-writer-gemini31": allow
+    "superpowers-plan-writer-gpt": allow
+    "superpowers-plan-writer-gemini": allow
     "superpowers-implementer": allow
     "superpowers-code-reviewer": allow
 ---
@@ -84,11 +83,9 @@ You may update plan status checkboxes and plan status summaries when coordinatin
 
 ### Phase 2 — Spec writing
 
-**Model selection:** Default is `superpowers-spec-writer` (GPT 5.5). If the user requests a different model, dispatch the corresponding variant:
-- GPT 5.5 (default): `superpowers-spec-writer`
-- Opus 4.7: `superpowers-spec-writer-opus47`
+**Model selection:** Default is `superpowers-spec-writer` (GPT 5.5). No variants are currently available. If the user requests a different model, inform them that only GPT 5.5 is supported for spec writing.
 
-If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
+If the user has not specified a model, use the default.
 
 1. Dispatch the appropriate spec-writer subagent with approved brainstorm context.
 2. Require the spec writer to self-review and audit the spec before returning it.
@@ -97,10 +94,10 @@ If the user has not specified a model, use the default. Only switch if the user 
 
 ### Phase 3 — Plan writing
 
-**Model selection:** Default is `superpowers-plan-writer` (Opus 4.7). If the user requests a different model, dispatch the corresponding variant:
-- Opus 4.7 (default): `superpowers-plan-writer`
-- GPT 5.5: `superpowers-plan-writer-gpt55`
-- Gemini 3.1 Pro Preview (only when explicitly requested): `superpowers-plan-writer-gemini31`
+**Model selection:** Default is `superpowers-plan-writer` (GPT 5.5). If the user requests a different model, dispatch the corresponding variant:
+- GPT 5.5 (default): `superpowers-plan-writer`
+- GPT: `superpowers-plan-writer-gpt`
+- Gemini (only when explicitly requested): `superpowers-plan-writer-gemini`
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 
