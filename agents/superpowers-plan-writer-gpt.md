@@ -1,7 +1,7 @@
 ---
 name: superpowers-plan-writer-gpt
-description: Writes the implementation plan from an approved spec using GPT via GitHub Copilot. Invoked by the superpowers primary agent when the user requests GPT for plan writing.
-model: github-copilot/gpt-5.5
+description: Writes the implementation plan from an approved spec using DeepSeek V4 Pro via OpenCode Go. Invoked by the superpowers primary agent when the user requests the DeepSeek variant for plan writing.
+model: opencode-go/deepseek-v4-pro
 mode: subagent
 hidden: true
 permission:

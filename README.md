@@ -31,17 +31,19 @@ The installer also installs the supported vendored skill set from `skills/`. Ski
 
 The vendored sources under `skills/<name>/` stay byte-identical to upstream `obra/superpowers`; the installer copies each skill to `~/.config/opencode/skills/superpowers-<name>/` and rewrites the SKILL.md `name:` field plus internal `superpowers:<skill>` cross-references during install. Lockfile verification (`npm run verify:skills`) continues to run against the upstream-faithful sources.
 
-The installer renders every agent's `model:` field from the selected profile. Without `--profile`, the installer auto-detects from `~/.local/share/opencode/auth.json` and prefers `copilot` when GitHub Copilot is authed, falling back to `anthropic` when only Anthropic is authed.
+The installer renders every agent's `model:` field from the selected profile. Without `--profile`, the installer auto-detects from `~/.local/share/opencode/auth.json` and prefers `opencode-go` when OpenCode Go is authed, then `copilot` when GitHub Copilot is authed, falling back to `anthropic` when only Anthropic is authed.
 
 ### Profiles
 
-| Agent | `copilot` (default when Copilot is authed) | `copilot-lite` | `anthropic` |
-| --- | --- | --- | --- |
-| `superpowers` (main) | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-haiku-4-5` |
-| `superpowers-spec-writer` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
-| `superpowers-plan-writer` | `anthropic/claude-opus-4-7` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
-| `superpowers-implementer` | `github-copilot/claude-sonnet-4.6` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
-| `superpowers-code-reviewer` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4` |
+| Agent | `opencode-go` (default when OpenCode Go is authed) | `copilot` (default when Copilot is authed) | `copilot-lite` | `anthropic` |
+| --- | --- | --- | --- | --- |
+| `superpowers` (main) | `opencode-go/deepseek-v4-flash` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-haiku-4-5` |
+| `superpowers-spec-writer` | `opencode-go/minimax-m3` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+| `superpowers-plan-writer` | `opencode-go/qwen3.7-max` | `anthropic/claude-opus-4-7` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
+| `superpowers-implementer` | `opencode-go/kimi-k2.6` | `github-copilot/claude-sonnet-4.6` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
+| `superpowers-code-reviewer` | `opencode-go/deepseek-v4-pro` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4` |
+
+The `opencode-go` profile matches each agent to a model suited to its job: the orchestrator runs on the fast, cheap `deepseek-v4-flash`; spec and plan writing use strong reasoning models (`minimax-m3`, `qwen3.7-max`); implementation uses the long-horizon agentic coder `kimi-k2.6`; and review uses `deepseek-v4-pro` for its coding/bug-finding strength. The two `superpowers-plan-writer` variants map to `opencode-go/deepseek-v4-pro` (`-gpt`) and `opencode-go/minimax-m3` (`-gemini`).
 
 The `copilot` profile assumes that delegated subagent calls do not consume Copilot premium-request quota, so it uses top-tier reasoning models (GPT 5.5, Sonnet 4.6) for subagents while keeping the orchestrator on `gpt-5.4-mini`. Use `copilot-lite` if you want to avoid premium-tier model IDs entirely. The matrix lives in `scripts/install-profiles.json` and is easy to fork.
 
@@ -54,7 +56,7 @@ The vendored snapshot is pinned in `skills/superpowers.lock.json` with the upstr
 ## Prerequisites
 
 1. **OpenCode** installed and working.
-2. A provider configured in OpenCode that matches one of the bundled profiles: a **GitHub Copilot subscription** for the `copilot` / `copilot-lite` profiles, or **Anthropic API access** for the `anthropic` profile. The installer auto-detects which one to use; pass `--profile` to override.
+2. A provider configured in OpenCode that matches one of the bundled profiles: **OpenCode Go** for the `opencode-go` profile, a **GitHub Copilot subscription** for the `copilot` / `copilot-lite` profiles, or **Anthropic API access** for the `anthropic` profile. The installer auto-detects which one to use; pass `--profile` to override.
 3. **Node.js 16 or newer** for the `npx` entrypoint and verification scripts.
 
 You do not need to install `obra/superpowers` separately for this agent pack; the required skills are bundled here.
