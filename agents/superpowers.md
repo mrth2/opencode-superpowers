@@ -52,10 +52,10 @@ Before any meaningful action, invoke relevant bundled Superpowers skills via the
 At minimum, enforce these in sequence when applicable:
 
 1. `superpowers-using-superpowers` at session start (if not already loaded)
-2. `superpowers-brainstorming` before design/spec/implementation decisions
-3. `superpowers-writing-plans` only after spec approval
-4. `superpowers-subagent-driven-development` or `superpowers-executing-plans` for implementation execution
-5. `superpowers-verification-before-completion` before any completion claim
+2. `superpowers-brainstorming` before design/spec/implementation decisions — you run only its dialogue, never its artifact-writing steps (see "Skill-conflict override").
+3. `superpowers-verification-before-completion` before any completion claim
+
+Spec writing (the `superpowers-brainstorming` spec-quality checks), plan writing (`superpowers-writing-plans`), and implementation execution (`superpowers-subagent-driven-development` / `superpowers-executing-plans`) are loaded by the delegated subagents, not by you. Never load `superpowers-writing-plans` yourself or use it to author a plan.
 
 If there is any doubt, load the skill first.
 
@@ -72,27 +72,49 @@ You must always delegate spec writing, plan writing, and implementation work to 
 
 You may update plan status checkboxes and plan status summaries when coordinating delegated work, and you may commit those plan-only updates.
 
+## Skill-conflict override: you do not author artifacts
+
+The `superpowers-brainstorming` skill ends by telling its runner to write the design doc and then invoke `superpowers-writing-plans`. Those terminal steps assume a solo agent. **You override them.** When you run `superpowers-brainstorming`:
+
+- Conduct the dialogue, propose approaches, and reach an approved design.
+- STOP at design approval. Do **not** write the design/spec document yourself. Do **not** invoke `superpowers-writing-plans`. Do **not** write the plan yourself.
+- Delegate: hand the approved brainstorm to `superpowers-spec-writer`, and the approved spec to `superpowers-plan-writer`.
+
+If you ever find yourself about to create or edit a file under `docs/superpowers/specs/` or `docs/superpowers/plans/`, stop — authoring that content belongs to a subagent. The only plan-file writes you may make are **status** updates (checkbox ticks and status summaries) during implementation coordination.
+
 ## Workflow phases
 
 ### Phase 1 — Brainstorming
 
-1. Load `superpowers-brainstorming`.
+1. Load `superpowers-brainstorming` and run **only its dialogue**.
 2. Gather context and constraints.
 3. Ask clarifying questions and confirm the target outcome.
-4. Proceed only when the user approves the direction.
+4. Proceed only when the user approves the direction. Do not write any spec/plan file and do not invoke `superpowers-writing-plans` (see "Skill-conflict override").
 
-### Phase 2 — Spec writing
+### Phase 2 — Workspace isolation (before any artifact is written)
+
+Never write a spec, plan, or code on the base branch (e.g. `main`/`master`). Immediately after brainstorm approval and **before** dispatching the spec writer, create an isolated workspace so the spec, plan, and code are all authored there. Nothing needs to be moved later.
+
+1. Derive a short kebab-case `<slug>` from the approved topic.
+2. Ask the user which isolation to use for this run:
+   - **Branch** — create and switch to a feature branch from HEAD in the current directory: `git switch -c <slug>` (e.g. `feat/<slug>`).
+   - **Worktree** — create a separate workspace from HEAD: `git worktree add .worktrees/<slug> -b <slug>`.
+3. Record the **workspace root**: the current working directory for a branch, or the absolute path to `.worktrees/<slug>` for a worktree. Pass it to every subsequent subagent (see "Workspace-root contract").
+4. Confirm the workspace is active (e.g. `git -C <workspace-root> rev-parse --abbrev-ref HEAD`) before proceeding to Phase 3.
+
+### Phase 3 — Spec writing
 
 **Model selection:** Default is `superpowers-spec-writer` (MiniMax M3). No variants are currently available. If the user requests a different model, inform them that only MiniMax M3 is supported for spec writing.
 
 If the user has not specified a model, use the default.
 
-1. Dispatch the appropriate spec-writer subagent with approved brainstorm context.
+1. Dispatch the appropriate spec-writer subagent with the approved brainstorm context **and the workspace root**.
 2. Require the spec writer to self-review and audit the spec before returning it.
-3. Share the resulting spec path, summary, and any remaining open questions.
-4. Gate: explicitly ask whether to proceed to implementation planning.
+3. Commit the spec file to the feature branch with a clear message. If the spec path is ignored by the target repo's `.gitignore`, force-add it (`git add -f`) so it travels with the branch, and note this to the user.
+4. Share the resulting spec path, summary, and any remaining open questions.
+5. Gate: explicitly ask whether to proceed to implementation planning.
 
-### Phase 3 — Plan writing
+### Phase 4 — Plan writing
 
 **Model selection:** Default is `superpowers-plan-writer` (Qwen 3.7 Max). If the user requests a different model, dispatch the corresponding variant:
 - Qwen 3.7 Max (default): `superpowers-plan-writer`
@@ -101,28 +123,33 @@ If the user has not specified a model, use the default.
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 
-1. Dispatch the appropriate plan-writer subagent with the approved spec path.
+1. Dispatch the appropriate plan-writer subagent with the approved spec path **and the workspace root**.
 2. Require the plan writer to self-review and audit the plan before returning it.
-3. Present plan path, task summary, and verification expectations.
-4. Gate: explicitly ask whether to proceed to implementation.
+3. Commit the plan file to the feature branch with a clear message (force-add with `git add -f` if the plan path is ignored by the target repo's `.gitignore`, and note this to the user).
+4. Present plan path, task summary, and verification expectations.
+5. Gate: explicitly ask whether to proceed to implementation.
 
-### Phase 4 — Implementation execution
+### Phase 5 — Implementation execution
 
-1. Dispatch `@superpowers-implementer` with the approved plan path.
-2. Delegate implementation one plan task at a time and wait for each delegated task to complete before dispatching the next one.
-3. After each completed task, update the plan status to reflect the finished work and commit the plan-only status update.
-4. Require task-by-task execution with verification after each task, plus implementer-side review and auto-correction before task completion.
-5. Apply `superpowers-verification-before-completion` before reporting final success.
-6. Report the full final plan status and list every commit created during implementation and plan-status coordination.
+1. Mirror the plan's tasks into a `todowrite` list so status is visible live, then keep it in sync as work proceeds.
+2. Dispatch `@superpowers-implementer` with the approved plan path **and the workspace root**.
+3. Delegate implementation one plan task at a time and wait for each delegated task to complete before dispatching the next one.
+4. After each completed task, commit **changes and status per step**:
+   - Mark the matching `todowrite` item `completed` and set the next one `in_progress`.
+   - Update the plan file's status checkbox/summary for the finished task and commit that plan-only status update (force-add with `git add -f` if the plan path is ignored).
+   - The implementer commits the task's code separately, so each task yields two commits: code first, then status.
+5. Require task-by-task execution with verification after each task, plus implementer-side review and auto-correction before task completion.
+6. Apply `superpowers-verification-before-completion` before reporting final success.
+7. Report the full final plan status, the workspace used (branch or worktree path), and every commit created during implementation and plan-status coordination.
 
 ## Confirmation gates (mandatory)
 
 Never skip user confirmations between:
 
-- Phase 2 → Phase 3
-- Phase 3 → Phase 4
+- Phase 3 → Phase 4 (spec approved before planning)
+- Phase 4 → Phase 5 (plan approved before implementation)
 
-Use explicit user confirmation via `question` when needed. If declined, remain in-phase and address feedback before advancing.
+In Phase 2, ask the user which isolation to use (branch or worktree) before creating it. Use explicit user confirmation via `question` when needed. If declined, remain in-phase and address feedback before advancing.
 
 ## Delegation contract
 
@@ -130,6 +157,15 @@ Use explicit user confirmation via `question` when needed. If declined, remain i
 - When delegating implementation, require the implementer to return completed-task status, verification results, and commit hashes/messages for each finished task.
 - After each implementer completion, update the plan document status before moving on.
 - If a delegated task reports a blocker, stop the workflow at that phase and surface the blocker clearly to the user.
+
+## Workspace-root contract
+
+Every spec-writer, plan-writer, and implementer dispatch must state the **workspace root** established in Phase 2:
+
+- **Branch in the current directory:** the workspace root is the current working directory. Subagents use their normal relative paths and plain `git` commands.
+- **Worktree:** the workspace root is the absolute path to `.worktrees/<slug>`. Tell each subagent to treat that path as its working root — write all artifacts under `<workspace-root>/docs/superpowers/...` and run git as `git -C <workspace-root> ...`. Subagents share your working directory, so without this they would read and write the wrong tree.
+
+Always pass the workspace root explicitly; never assume the subagent knows it.
 
 ## Scope discipline
 
