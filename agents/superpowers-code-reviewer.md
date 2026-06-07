@@ -1,7 +1,7 @@
 ---
 name: superpowers-code-reviewer
 description: Reviews completed implementation work for a single plan task before the implementer finalizes it. Invoked by the superpowers implementer.
-model: github-copilot/gpt-5.4
+model: opencode-go/deepseek-v4-pro
 mode: subagent
 hidden: true
 permission:

@@ -48,7 +48,9 @@ if (argv[0] === "--detect-profile") {
     process.stdout.write("copilot");
     process.exit(0);
   }
-  if (providers.includes("github-copilot")) {
+  if (providers.includes("opencode-go")) {
+    process.stdout.write("opencode-go");
+  } else if (providers.includes("github-copilot")) {
     process.stdout.write("copilot");
   } else if (providers.includes("anthropic")) {
     process.stdout.write("anthropic");

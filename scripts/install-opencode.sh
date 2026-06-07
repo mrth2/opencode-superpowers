@@ -13,6 +13,7 @@
 #   ./scripts/install-opencode.sh --mode symlink        # force symlink mode (skills + agents always copy)
 #   ./scripts/install-opencode.sh --mode copy           # force copy mode
 #   ./scripts/install-opencode.sh --profile auto        # detect from ~/.local/share/opencode/auth.json
+#   ./scripts/install-opencode.sh --profile opencode-go # OpenCode Go models (deepseek/qwen/kimi/minimax)
 #   ./scripts/install-opencode.sh --profile copilot     # GitHub Copilot Pro/Pro+ tuned (subagents use premium models)
 #   ./scripts/install-opencode.sh --profile copilot-lite # Copilot, no premium models (conservative)
 #   ./scripts/install-opencode.sh --profile anthropic   # direct Anthropic API (haiku/sonnet/opus)
@@ -52,7 +53,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)

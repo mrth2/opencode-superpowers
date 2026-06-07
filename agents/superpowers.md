@@ -83,7 +83,7 @@ You may update plan status checkboxes and plan status summaries when coordinatin
 
 ### Phase 2 — Spec writing
 
-**Model selection:** Default is `superpowers-spec-writer` (GPT 5.5). No variants are currently available. If the user requests a different model, inform them that only GPT 5.5 is supported for spec writing.
+**Model selection:** Default is `superpowers-spec-writer` (MiniMax M3). No variants are currently available. If the user requests a different model, inform them that only MiniMax M3 is supported for spec writing.
 
 If the user has not specified a model, use the default.
 
@@ -94,10 +94,10 @@ If the user has not specified a model, use the default.
 
 ### Phase 3 — Plan writing
 
-**Model selection:** Default is `superpowers-plan-writer` (GPT 5.5). If the user requests a different model, dispatch the corresponding variant:
-- GPT 5.5 (default): `superpowers-plan-writer`
-- GPT: `superpowers-plan-writer-gpt`
-- Gemini (only when explicitly requested): `superpowers-plan-writer-gemini`
+**Model selection:** Default is `superpowers-plan-writer` (Qwen 3.7 Max). If the user requests a different model, dispatch the corresponding variant:
+- Qwen 3.7 Max (default): `superpowers-plan-writer`
+- DeepSeek V4 Pro: `superpowers-plan-writer-gpt`
+- MiniMax M3 (only when explicitly requested): `superpowers-plan-writer-gemini`
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 

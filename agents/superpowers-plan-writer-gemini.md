@@ -1,7 +1,7 @@
 ---
 name: superpowers-plan-writer-gemini
-description: Writes the implementation plan from an approved spec using Gemini via GitHub Copilot. Invoked by the superpowers primary agent only when the user explicitly requests Gemini for plan writing.
-model: github-copilot/gemini-3.1-pro-preview
+description: Writes the implementation plan from an approved spec using MiniMax M3 via OpenCode Go. Invoked by the superpowers primary agent only when the user explicitly requests the MiniMax variant for plan writing.
+model: opencode-go/minimax-m3
 mode: subagent
 hidden: true
 permission:
