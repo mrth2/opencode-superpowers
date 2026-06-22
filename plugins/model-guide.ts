@@ -1,3 +1,21 @@
-// Flat entry so OpenCode's plugin auto-discovery ({plugin,plugins}/*.{ts,js})
-// finds this plugin. The real implementation (JSX) lives in the subdir.
-export { default } from "./model-guide/index.tsx"
+import { openGuide } from "./model-guide/guide"
+
+const tui: any = async (api: any) => {
+  api.keymap.registerLayer({
+    commands: [
+      {
+        name: "superpowers.model_guide",
+        title: "Model guide",
+        slashName: "models-guide",
+        category: "Model",
+        namespace: "palette",
+        run() {
+          openGuide(api)
+        },
+      },
+    ],
+    bindings: [{ key: "<leader>g", cmd: "superpowers.model_guide", desc: "Open model guide" }],
+  })
+}
+
+export default { id: "superpowers-model-guide", tui }
