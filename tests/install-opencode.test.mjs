@@ -344,6 +344,55 @@ test("install registers the model-guide plugin in tui.json, preserving existing 
   assert.equal(fs.existsSync(path.join(pluginsDir, "model-guide")), false, "plugin subdir not removed");
 });
 
+test("install preserves a JSONC tui.json (comments + trailing comma) without data loss", () => {
+  const tempHome = makeTempDir();
+  const pluginsDir = path.join(tempHome, "plugins");
+  const tuiConfig = path.join(tempHome, "tui.json");
+  // OpenCode parses tui.json as JSONC; the installer must not clobber it.
+  fs.writeFileSync(
+    tuiConfig,
+    `{\n  // user's theme\n  "theme": "tokyonight",\n  "plugin": ["existing-plugin"], // keep\n}\n`,
+  );
+  const env = envFor(tempHome, { OPENCODE_PLUGINS_DIR: pluginsDir, OPENCODE_TUI_CONFIG_FILE: tuiConfig });
+
+  const install = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(install.status, 0, install.stderr || install.stdout);
+
+  const cfg = JSON.parse(fs.readFileSync(tuiConfig, "utf8"));
+  assert.equal(cfg.theme, "tokyonight", "JSONC parse failed and wiped existing keys");
+  assert.ok(cfg.plugin.includes("existing-plugin"), "existing plugin entry lost");
+  const spec = `file://${path.join(pluginsDir, "model-guide", "index.ts")}`;
+  assert.ok(cfg.plugin.includes(spec), "our plugin spec not added");
+});
+
+test("an unparseable tui.json is left untouched with a warning, not overwritten", () => {
+  const tempHome = makeTempDir();
+  const pluginsDir = path.join(tempHome, "plugins");
+  const tuiConfig = path.join(tempHome, "tui.json");
+  const garbage = "this is not json at all {{{";
+  fs.writeFileSync(tuiConfig, garbage);
+  const env = envFor(tempHome, { OPENCODE_PLUGINS_DIR: pluginsDir, OPENCODE_TUI_CONFIG_FILE: tuiConfig });
+
+  const install = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(install.status, 0, install.stderr || install.stdout);
+  assert.equal(fs.readFileSync(tuiConfig, "utf8"), garbage, "unparseable tui.json was overwritten");
+  assert.match(`${install.stdout}\n${install.stderr}`, /warn\s+could not parse/);
+});
+
+test("uninstall --dry-run does not mutate tui.json", () => {
+  const tempHome = makeTempDir();
+  const pluginsDir = path.join(tempHome, "plugins");
+  const tuiConfig = path.join(tempHome, "tui.json");
+  const env = envFor(tempHome, { OPENCODE_PLUGINS_DIR: pluginsDir, OPENCODE_TUI_CONFIG_FILE: tuiConfig });
+
+  assert.equal(runInstaller(["--profile", "copilot"], { env }).status, 0);
+  const before = fs.readFileSync(tuiConfig, "utf8");
+
+  const dryUninstall = runInstaller(["--uninstall", "--dry-run"], { env });
+  assert.equal(dryUninstall.status, 0, dryUninstall.stderr || dryUninstall.stdout);
+  assert.equal(fs.readFileSync(tuiConfig, "utf8"), before, "dry-run uninstall mutated tui.json");
+});
+
 test("install creates tui.json when absent and uninstall deletes it when left empty", () => {
   const tempHome = makeTempDir();
   const pluginsDir = path.join(tempHome, "plugins");

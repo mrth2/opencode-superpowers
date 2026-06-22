@@ -45,6 +45,26 @@ test("footer reflects context, vision, and cost; description never carries specs
   expect(opt.description).not.toContain("·")
 })
 
+test("buildOptions tolerates providers missing name or models without throwing", () => {
+  const api = stubApi([
+    { id: "no-name", models: { a: { id: "a", name: "A" } } },
+    { id: "no-models", name: "NoModels" },
+    null,
+  ])
+  let options: any[]
+  expect(() => {
+    options = buildOptions(api)
+  }).not.toThrow()
+  // The one well-formed model still shows up.
+  expect(options!.some((o) => o.title === "A")).toBe(true)
+})
+
+test("footer omits unknown specs instead of showing '?'", () => {
+  const api = stubApi([{ id: "p", name: "P", models: { m: { id: "m", name: "M" } } }])
+  const opt = buildOptions(api)[0]
+  expect(opt.footer).not.toContain("?")
+})
+
 test("buildOptions sorts providers then models by display name", () => {
   const api = stubApi([
     { id: "z", name: "Zeta", models: { b: { id: "b", name: "Beta" }, a: { id: "a", name: "Alpha" } } },

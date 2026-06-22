@@ -336,29 +336,76 @@ NODE
     echo "manifest $MANIFEST"
 }
 
+# OpenCode parses tui.json as JSONC (comments + trailing commas allowed), so a
+# strict JSON.parse can fail on a real user config. This shared reader strips
+# comments/trailing commas while respecting string literals, then parses. Both
+# helpers below inline it and NEVER overwrite a file they cannot parse, to avoid
+# destroying user config; they print a status token and always exit 0 so the
+# script's `set -e` does not abort on a skipped registration.
+read -r -d '' MG_JSONC_HELPER <<'JS' || true
+function parseJsonc(text) {
+  let out = "";
+  let inStr = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], c2 = text[i + 1];
+    if (inStr) {
+      out += c;
+      if (c === "\\") { out += text[i + 1] ?? ""; i++; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; out += c; continue; }
+    if (c === "/" && c2 === "/") { while (i < text.length && text[i] !== "\n") i++; continue; }
+    if (c === "/" && c2 === "*") { i += 2; while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++; i++; continue; }
+    out += c;
+  }
+  return JSON.parse(out.replace(/,(\s*[}\]])/g, "$1"));
+}
+function readConfig(file) {
+  const fs = require("fs");
+  let raw;
+  try { raw = fs.readFileSync(file, "utf8"); } catch { return { cfg: {}, existed: false }; }
+  if (raw.trim() === "") return { cfg: {}, existed: false };
+  for (const parse of [JSON.parse, parseJsonc]) {
+    try {
+      const cfg = parse(raw);
+      if (cfg && typeof cfg === "object" && !Array.isArray(cfg)) return { cfg, existed: true };
+    } catch {}
+  }
+  return { cfg: null, existed: true };
+}
+JS
+
 # Add our entry to the `plugin` array in tui.json, preserving any existing keys
 # and entries and de-duplicating our spec. Creates the file if absent.
 register_tui_plugin() {
   local spec="$1"
   if [[ "$DRY_RUN" == 1 ]]; then
+    printf '[dry-run] register tui plugin %s in %s\n' "$spec" "$TUI_CONFIG"
     return 0
   fi
   run mkdir -p "$(dirname "$TUI_CONFIG")"
-  node - <<'NODE' "$TUI_CONFIG" "$spec"
+  local status
+  status="$(node - "$TUI_CONFIG" "$spec" <<NODE
+${MG_JSONC_HELPER}
 const fs = require("fs");
 const path = require("path");
 const [file, spec] = process.argv.slice(2);
-let cfg = {};
-try {
-  const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) cfg = parsed;
-} catch {}
+const { cfg } = readConfig(file);
+if (cfg === null) { process.stdout.write("skip"); process.exit(0); }
 const arr = Array.isArray(cfg.plugin) ? cfg.plugin : [];
 if (!arr.includes(spec)) arr.push(spec);
 cfg.plugin = arr;
 fs.mkdirSync(path.dirname(file), { recursive: true });
-fs.writeFileSync(file, `${JSON.stringify(cfg, null, 2)}\n`);
+fs.writeFileSync(file, \`\${JSON.stringify(cfg, null, 2)}\n\`);
+process.stdout.write("ok");
 NODE
+)"
+  if [[ "$status" == "skip" ]]; then
+    echo "warn  could not parse $TUI_CONFIG; add the model-guide plugin entry manually" >&2
+  else
+    echo "register tui plugin -> $TUI_CONFIG"
+  fi
 }
 
 # Reverse register_tui_plugin: drop our spec from tui.json's `plugin` array,
@@ -366,16 +413,17 @@ NODE
 unregister_tui_plugin() {
   local config="$1" spec="$2"
   [[ -f "$config" ]] || return 0
-  node - <<'NODE' "$config" "$spec"
+  if [[ "$DRY_RUN" == 1 ]]; then
+    printf '[dry-run] unregister tui plugin %s from %s\n' "$spec" "$config"
+    return 0
+  fi
+  local status
+  status="$(node - "$config" "$spec" <<NODE
+${MG_JSONC_HELPER}
 const fs = require("fs");
 const [file, spec] = process.argv.slice(2);
-let cfg;
-try {
-  cfg = JSON.parse(fs.readFileSync(file, "utf8"));
-} catch {
-  process.exit(0);
-}
-if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) process.exit(0);
+const { cfg } = readConfig(file);
+if (cfg === null) { process.stdout.write("skip"); process.exit(0); }
 if (Array.isArray(cfg.plugin)) {
   cfg.plugin = cfg.plugin.filter((entry) => entry !== spec);
   if (cfg.plugin.length === 0) delete cfg.plugin;
@@ -384,10 +432,16 @@ if (Object.keys(cfg).length === 0) {
   fs.unlinkSync(file);
   process.stdout.write("removed");
 } else {
-  fs.writeFileSync(file, `${JSON.stringify(cfg, null, 2)}\n`);
+  fs.writeFileSync(file, \`\${JSON.stringify(cfg, null, 2)}\n\`);
   process.stdout.write("updated");
 }
 NODE
+)"
+  if [[ "$status" == "skip" ]]; then
+    echo "warn  could not parse $config; remove the model-guide plugin entry manually" >&2
+  else
+    echo "unregistered tui plugin <- $config"
+  fi
 }
 
 install_all() {
@@ -469,14 +523,13 @@ install_all() {
     fi
   done
   local plugin_spec="file://$plugin_dest/index.ts"
-  register_tui_plugin "$plugin_spec"
   if [[ "$DRY_RUN" == 1 ]]; then
     printf '[dry-run] copy  plugin model-guide -> %s\n' "$plugin_dest"
-    printf '[dry-run] register tui plugin %s in %s\n' "$plugin_spec" "$TUI_CONFIG"
   else
     echo "copy  plugin model-guide -> $plugin_dest"
-    echo "register tui plugin -> $TUI_CONFIG"
   fi
+  # register_tui_plugin handles its own dry-run and success/warn messaging.
+  register_tui_plugin "$plugin_spec"
 
   MG_TUI_CONFIG="$TUI_CONFIG" MG_TUI_SPEC="$plugin_spec" write_manifest "$mode" "${installed_paths[@]}"
   echo "installed/refreshed $installed_count managed entrie(s)"
@@ -506,8 +559,8 @@ for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkil
   tui_config="$(node -e 'try { const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.stdout.write(m.tuiPlugin?.config || ""); } catch {}' "$MANIFEST")"
   tui_spec="$(node -e 'try { const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.stdout.write(m.tuiPlugin?.spec || ""); } catch {}' "$MANIFEST")"
   if [[ -n "$tui_config" && -n "$tui_spec" ]]; then
+    # unregister_tui_plugin handles its own dry-run and success/warn messaging.
     unregister_tui_plugin "$tui_config" "$tui_spec"
-    echo "unregistered tui plugin <- $tui_config"
   fi
   run rm -f "$MANIFEST"
   echo "uninstalled $removed managed entrie(s)"
