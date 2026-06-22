@@ -562,6 +562,13 @@ for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkil
     # unregister_tui_plugin handles its own dry-run and success/warn messaging.
     unregister_tui_plugin "$tui_config" "$tui_spec"
   fi
+  # Also drop the legacy flat entry from older builds, in case the user only ever
+  # runs --uninstall on the new version (it was never recorded in this manifest).
+  local legacy_flat="$PLUGINS_DEST/model-guide.ts"
+  if [[ -f "$legacy_flat" ]]; then
+    force_remove "$legacy_flat"
+    [[ "$DRY_RUN" == 1 ]] || echo "removed legacy flat plugin $legacy_flat"
+  fi
   run rm -f "$MANIFEST"
   echo "uninstalled $removed managed entrie(s)"
 }
