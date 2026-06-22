@@ -38,3 +38,8 @@ test("hintsFor prefers curated by id, then family, then derived", () => {
   const derived = hintsFor({ id: "totally-unknown-model" })
   expect(derived.length).toBeGreaterThanOrEqual(1)
 })
+
+test("hintsFor matches curated entry by family when id misses", () => {
+  const r = hintsFor({ id: "unknown-variant-xyz", family: "gemini-2.5-pro" })
+  expect(r).toEqual(CURATED["gemini-2.5-pro"])
+})
