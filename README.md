@@ -47,6 +47,31 @@ The `opencode-go` profile matches each agent to a model suited to its job: the o
 
 The `copilot` profile assumes that delegated subagent calls do not consume Copilot premium-request quota, so it uses top-tier reasoning models (GPT 5.5, Sonnet 4.6) for subagents while keeping the orchestrator on `gpt-5.4-mini`. Use `copilot-lite` if you want to avoid premium-tier model IDs entirely. The matrix lives in `scripts/install-profiles.json` and is easy to fork.
 
+## Model guide plugin
+
+The pack also installs a small read-only TUI plugin, **Model guide**, that lists
+every model your providers expose with a short, distinctive "best for" hint and
+its key specs. It is a reference surface for picking a model; it does not switch
+the active model (OpenCode does not expose that to plugins), so you still switch
+with the stock shortcut.
+
+- Open it with the keybind **`<leader>g`** or the slash command **`/models-guide`**.
+- Each row shows the model name, a role hint (e.g. *Fast edits & quick Q&A*,
+  *Hard bugs & architecture*, *Code generation & completion*), and a right-aligned
+  footer with `context · vision · cost` (e.g. `1M · $$`).
+- Hints come from a curated map for well-known families (Claude, Gemini) and an
+  otherwise capability- and tier-derived fallback (it reads `Flash`/`Mini`/`Haiku`
+  vs `Pro`/`Max`/`Opus` markers plus the `reasoning` flag), so models in the same
+  family read distinctly. Cost tiers: `Free` / `$` (≤ $1/M in) / `$$` (≤ $5/M) / `$$$`.
+
+OpenCode loads external TUI plugins only from a `plugin` array in `tui.json`
+(the flat `plugins/` directory is server-plugin discovery), so the installer
+copies the plugin to `~/.config/opencode/plugins/model-guide/` and registers its
+entry in `~/.config/opencode/tui.json`, preserving any existing keys. `--uninstall`
+removes just that entry. The default keybind `<leader>g` is what upstream OpenCode
+otherwise binds to `session_timeline`; remap it in your `tui.json` keybinds if you
+use the timeline.
+
 ## What is not bundled
 
 This repository vendors only the minimum upstream Superpowers skills required by the agents listed above. It does not bundle the full upstream plugin runtime, hooks, provider routing, fallback engines, or unrelated skills from `obra/superpowers`.
@@ -114,6 +139,8 @@ The installer respects:
 | --- | --- | --- |
 | `OPENCODE_AGENTS_DIR` | `~/.config/opencode/agents` | Where agent files are installed. |
 | `OPENCODE_SKILLS_DIR` | `~/.config/opencode/skills` | Where skill directories are installed. |
+| `OPENCODE_PLUGINS_DIR` | `~/.config/opencode/plugins` | Where the model-guide plugin is installed. |
+| `OPENCODE_TUI_CONFIG_FILE` | `~/.config/opencode/tui.json` | TUI config the model-guide plugin is registered in. |
 | `OPENCODE_SUPERPOWERS_MANIFEST` | `~/.config/opencode/opencode-superpowers-install.json` | Local manifest used for safe update and uninstall. |
 | `OPENCODE_AUTH_FILE` | `${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json` | OpenCode auth file used for profile auto-detection. |
 
