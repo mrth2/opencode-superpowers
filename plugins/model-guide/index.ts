@@ -1,4 +1,4 @@
-import { openGuide } from "./model-guide/guide"
+import { openGuide } from "./guide"
 
 const tui: any = async (api: any) => {
   api.keymap.registerLayer({

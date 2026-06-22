@@ -300,6 +300,71 @@ test("uninstall removes the agent file, manifest, and at least one installed ski
   assert.equal(fs.existsSync(installedSkillPath), false);
 });
 
+test("install registers the model-guide plugin in tui.json, preserving existing keys", () => {
+  const tempHome = makeTempDir();
+  const pluginsDir = path.join(tempHome, "plugins");
+  const tuiConfig = path.join(tempHome, "tui.json");
+  // Pre-existing config the installer must not clobber.
+  fs.writeFileSync(tuiConfig, JSON.stringify({ theme: "tokyonight", plugin: ["some-other-plugin"] }, null, 2));
+  const env = envFor(tempHome, {
+    OPENCODE_PLUGINS_DIR: pluginsDir,
+    OPENCODE_TUI_CONFIG_FILE: tuiConfig,
+  });
+
+  const install = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(install.status, 0, install.stderr || install.stdout);
+
+  // Subdir entry + helpers are copied; no flat model-guide.ts.
+  const entry = path.join(pluginsDir, "model-guide", "index.ts");
+  assert.equal(fs.existsSync(entry), true, "index.ts entry missing");
+  assert.equal(fs.existsSync(path.join(pluginsDir, "model-guide", "guide.ts")), true);
+  assert.equal(fs.existsSync(path.join(pluginsDir, "model-guide", "hints.ts")), true);
+  assert.equal(fs.existsSync(path.join(pluginsDir, "model-guide.ts")), false, "flat entry should not exist");
+
+  const cfg = JSON.parse(fs.readFileSync(tuiConfig, "utf8"));
+  assert.equal(cfg.theme, "tokyonight", "existing key not preserved");
+  assert.ok(cfg.plugin.includes("some-other-plugin"), "existing plugin entry dropped");
+  const spec = `file://${entry}`;
+  assert.ok(cfg.plugin.includes(spec), `our plugin spec missing: ${JSON.stringify(cfg.plugin)}`);
+
+  // Re-install is idempotent: no duplicate spec.
+  const reinstall = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(reinstall.status, 0, reinstall.stderr || reinstall.stdout);
+  const cfg2 = JSON.parse(fs.readFileSync(tuiConfig, "utf8"));
+  assert.equal(cfg2.plugin.filter((s) => s === spec).length, 1, "duplicate spec after reinstall");
+
+  // Uninstall removes only our spec, preserving the rest.
+  const uninstall = runInstaller(["--uninstall"], { env });
+  assert.equal(uninstall.status, 0, uninstall.stderr || uninstall.stdout);
+  assert.equal(fs.existsSync(tuiConfig), true, "tui.json deleted despite other keys");
+  const cfg3 = JSON.parse(fs.readFileSync(tuiConfig, "utf8"));
+  assert.equal(cfg3.theme, "tokyonight");
+  assert.ok(cfg3.plugin.includes("some-other-plugin"));
+  assert.ok(!cfg3.plugin.includes(spec), "our plugin spec not removed on uninstall");
+  assert.equal(fs.existsSync(path.join(pluginsDir, "model-guide")), false, "plugin subdir not removed");
+});
+
+test("install creates tui.json when absent and uninstall deletes it when left empty", () => {
+  const tempHome = makeTempDir();
+  const pluginsDir = path.join(tempHome, "plugins");
+  const tuiConfig = path.join(tempHome, "tui.json");
+  const env = envFor(tempHome, {
+    OPENCODE_PLUGINS_DIR: pluginsDir,
+    OPENCODE_TUI_CONFIG_FILE: tuiConfig,
+  });
+
+  const install = runInstaller(["--profile", "copilot"], { env });
+  assert.equal(install.status, 0, install.stderr || install.stdout);
+  assert.equal(fs.existsSync(tuiConfig), true, "tui.json not created");
+  const cfg = JSON.parse(fs.readFileSync(tuiConfig, "utf8"));
+  const spec = `file://${path.join(pluginsDir, "model-guide", "index.ts")}`;
+  assert.deepEqual(cfg, { plugin: [spec] });
+
+  const uninstall = runInstaller(["--uninstall"], { env });
+  assert.equal(uninstall.status, 0, uninstall.stderr || uninstall.stdout);
+  assert.equal(fs.existsSync(tuiConfig), false, "empty tui.json should be deleted on uninstall");
+});
+
 test("invalid profile rejects with error: unknown profile: nope", () => {
   const tempHome = makeTempDir();
   const env = envFor(tempHome);

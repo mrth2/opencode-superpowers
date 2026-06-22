@@ -28,6 +28,10 @@ LOCK_FILE="$SKILLS_SRC/superpowers.lock.json"
 AGENTS_DEST="${OPENCODE_AGENTS_DIR:-$HOME/.config/opencode/agents}"
 SKILLS_DEST="${OPENCODE_SKILLS_DIR:-$HOME/.config/opencode/skills}"
 PLUGINS_DEST="${OPENCODE_PLUGINS_DIR:-$HOME/.config/opencode/plugins}"
+# OpenCode loads TUI plugins only from a `plugin` array in tui.json (the flat
+# plugins/ dir is server-plugin discovery only), so the installer registers the
+# model-guide entry there. See docs/superpowers/specs for the mechanism.
+TUI_CONFIG="${OPENCODE_TUI_CONFIG_FILE:-$HOME/.config/opencode/tui.json}"
 MANIFEST="${OPENCODE_SUPERPOWERS_MANIFEST:-$HOME/.config/opencode/opencode-superpowers-install.json}"
 
 FORCE=0
@@ -322,9 +326,68 @@ const manifest = {
   installedSkills,
   installedPlugins,
 };
+// Record the tui.json plugin registration so --uninstall can reverse the merge
+// (remove only our spec) instead of deleting a config file we do not fully own.
+if (process.env.MG_TUI_CONFIG && process.env.MG_TUI_SPEC) {
+  manifest.tuiPlugin = { config: process.env.MG_TUI_CONFIG, spec: process.env.MG_TUI_SPEC };
+}
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 NODE
     echo "manifest $MANIFEST"
+}
+
+# Add our entry to the `plugin` array in tui.json, preserving any existing keys
+# and entries and de-duplicating our spec. Creates the file if absent.
+register_tui_plugin() {
+  local spec="$1"
+  if [[ "$DRY_RUN" == 1 ]]; then
+    return 0
+  fi
+  run mkdir -p "$(dirname "$TUI_CONFIG")"
+  node - <<'NODE' "$TUI_CONFIG" "$spec"
+const fs = require("fs");
+const path = require("path");
+const [file, spec] = process.argv.slice(2);
+let cfg = {};
+try {
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) cfg = parsed;
+} catch {}
+const arr = Array.isArray(cfg.plugin) ? cfg.plugin : [];
+if (!arr.includes(spec)) arr.push(spec);
+cfg.plugin = arr;
+fs.mkdirSync(path.dirname(file), { recursive: true });
+fs.writeFileSync(file, `${JSON.stringify(cfg, null, 2)}\n`);
+NODE
+}
+
+# Reverse register_tui_plugin: drop our spec from tui.json's `plugin` array,
+# prune the key if it empties, and delete the file only if nothing else remains.
+unregister_tui_plugin() {
+  local config="$1" spec="$2"
+  [[ -f "$config" ]] || return 0
+  node - <<'NODE' "$config" "$spec"
+const fs = require("fs");
+const [file, spec] = process.argv.slice(2);
+let cfg;
+try {
+  cfg = JSON.parse(fs.readFileSync(file, "utf8"));
+} catch {
+  process.exit(0);
+}
+if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) process.exit(0);
+if (Array.isArray(cfg.plugin)) {
+  cfg.plugin = cfg.plugin.filter((entry) => entry !== spec);
+  if (cfg.plugin.length === 0) delete cfg.plugin;
+}
+if (Object.keys(cfg).length === 0) {
+  fs.unlinkSync(file);
+  process.stdout.write("removed");
+} else {
+  fs.writeFileSync(file, `${JSON.stringify(cfg, null, 2)}\n`);
+  process.stdout.write("updated");
+}
+NODE
 }
 
 install_all() {
@@ -376,15 +439,28 @@ install_all() {
     fi
   done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
 
+  # The model-guide TUI plugin lives entirely in a subdirectory: OpenCode's
+  # flat plugins/*.{ts,js} discovery is server-plugin-only, so a tui-only entry
+  # there is rejected (no server() export). Instead the subdir holds index.ts
+  # (entry) + guide.ts + hints.ts, and we register the absolute entry path in
+  # tui.json's `plugin` array, which is how the TUI loads external plugins.
   local plugin_dest="$PLUGINS_DEST/model-guide"
+  # Earlier installer versions dropped a flat entry here; OpenCode's server
+  # plugin discovery globs it and errors (tui-only export, no server()). Remove
+  # the legacy artifact so upgraders get a clean, error-free load.
+  local legacy_flat="$PLUGINS_DEST/model-guide.ts"
+  if [[ -f "$legacy_flat" ]]; then
+    if [[ "$DRY_RUN" == 1 ]]; then
+      printf '[dry-run] rm legacy flat plugin %s\n' "$legacy_flat"
+    else
+      run rm -f "$legacy_flat"
+      echo "removed legacy flat plugin $legacy_flat"
+    fi
+  fi
   run mkdir -p "$plugin_dest"
   installed_paths+=("$plugin_dest")
-  # Flat entry so OpenCode's plugin auto-discovery ({plugin,plugins}/*.{ts,js})
-  # finds the plugin; the real implementation lives in the subdir helpers.
-  run cp "$REPO_ROOT/plugins/model-guide.ts" "$PLUGINS_DEST/model-guide.ts"
-  installed_paths+=("$PLUGINS_DEST/model-guide.ts")
   local plugin_file plugin_src plugin_target
-  for plugin_file in hints.ts guide.ts; do
+  for plugin_file in index.ts guide.ts hints.ts; do
     plugin_src="$REPO_ROOT/plugins/model-guide/$plugin_file"
     plugin_target="$plugin_dest/$plugin_file"
     if [[ -f "$plugin_src" ]]; then
@@ -392,13 +468,17 @@ install_all() {
       installed_paths+=("$plugin_target")
     fi
   done
+  local plugin_spec="file://$plugin_dest/index.ts"
+  register_tui_plugin "$plugin_spec"
   if [[ "$DRY_RUN" == 1 ]]; then
     printf '[dry-run] copy  plugin model-guide -> %s\n' "$plugin_dest"
+    printf '[dry-run] register tui plugin %s in %s\n' "$plugin_spec" "$TUI_CONFIG"
   else
     echo "copy  plugin model-guide -> $plugin_dest"
+    echo "register tui plugin -> $TUI_CONFIG"
   fi
 
-  write_manifest "$mode" "${installed_paths[@]}"
+  MG_TUI_CONFIG="$TUI_CONFIG" MG_TUI_SPEC="$plugin_spec" write_manifest "$mode" "${installed_paths[@]}"
   echo "installed/refreshed $installed_count managed entrie(s)"
   if [[ "$skipped_count" -gt 0 ]]; then
     echo "error: skipped $skipped_count existing unmanaged entrie(s)" >&2
@@ -422,6 +502,13 @@ const fs = require("fs");
 const manifest = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
 for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkills || []), ...(manifest.installedPlugins || [])]) process.stdout.write(`${p}\0`);
 ' "$MANIFEST")
+  local tui_config tui_spec
+  tui_config="$(node -e 'try { const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.stdout.write(m.tuiPlugin?.config || ""); } catch {}' "$MANIFEST")"
+  tui_spec="$(node -e 'try { const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.stdout.write(m.tuiPlugin?.spec || ""); } catch {}' "$MANIFEST")"
+  if [[ -n "$tui_config" && -n "$tui_spec" ]]; then
+    unregister_tui_plugin "$tui_config" "$tui_spec"
+    echo "unregistered tui plugin <- $tui_config"
+  fi
   run rm -f "$MANIFEST"
   echo "uninstalled $removed managed entrie(s)"
 }
