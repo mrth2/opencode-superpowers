@@ -2,13 +2,14 @@ import { hintsFor, formatContext, hasVision, costTier, type ModelLike } from "./
 
 export type ModelValue = { providerID: string; modelID: string }
 
-// One inline line: "best-for hints - ctx 1M . vision". No em dashes.
-function describe(model: ModelLike): string {
-  const best = hintsFor(model).join(", ")
-  const specs = [`ctx ${formatContext(model.limit?.context)}`, hasVision(model) ? "vision" : null]
+// The title + description share one clipping line, while the footer is pinned
+// right and never truncated. So the specs (context, vision, cost) live in the
+// footer where they stay fully visible, and the description carries only the
+// short, distinctive role hint. Any extra curated hints drop to their own lines.
+export function footerFor(model: ModelLike): string {
+  return [formatContext(model.limit?.context), hasVision(model) ? "vision" : null, costTier(model)]
     .filter(Boolean)
     .join(" · ")
-  return specs ? `${best} - ${specs}` : best
 }
 
 export function buildOptions(api: any): any[] {
@@ -19,12 +20,14 @@ export function buildOptions(api: any): any[] {
       .filter((m) => m.status !== "deprecated")
       .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id))
     for (const model of models) {
+      const hints = hintsFor(model)
       out.push({
         title: model.name ?? model.id,
         value: { providerID: provider.id, modelID: model.id },
         category: provider.name,
-        description: describe(model),
-        footer: costTier(model),
+        description: hints[0],
+        details: hints.slice(1),
+        footer: footerFor(model),
       })
     }
   }
