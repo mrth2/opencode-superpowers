@@ -308,6 +308,7 @@ const fs = require("fs");
 const [manifestPath, projectId, packageVersion, mode, sourceRoot, lockSha256, upstreamCommit, ...installed] = process.argv.slice(2);
 const installedAgents = installed.filter((entry) => entry.includes("/agents/"));
 const installedSkills = installed.filter((entry) => entry.includes("/skills/"));
+const installedPlugins = installed.filter((entry) => entry.includes("/plugins/"));
 const manifest = {
   projectId,
   installerVersion: 1,
@@ -319,6 +320,7 @@ const manifest = {
   upstreamCommit,
   installedAgents,
   installedSkills,
+  installedPlugins,
 };
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 NODE
@@ -374,12 +376,23 @@ install_all() {
     fi
   done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
 
-  run mkdir -p "$PLUGINS_DEST/model-guide"
-  run cp "$REPO_ROOT/plugins/model-guide/index.tsx" "$PLUGINS_DEST/model-guide/index.tsx"
-  run cp "$REPO_ROOT/plugins/model-guide/guide-dialog.tsx" "$PLUGINS_DEST/model-guide/guide-dialog.tsx"
-  run cp "$REPO_ROOT/plugins/model-guide/hints.ts" "$PLUGINS_DEST/model-guide/hints.ts"
-  run cp "$REPO_ROOT/plugins/model-guide/package.json" "$PLUGINS_DEST/model-guide/package.json"
-  echo "copy  plugin model-guide -> $PLUGINS_DEST/model-guide"
+  local plugin_dest="$PLUGINS_DEST/model-guide"
+  run mkdir -p "$plugin_dest"
+  installed_paths+=("$plugin_dest")
+  local plugin_file plugin_src plugin_target
+  for plugin_file in index.tsx guide-dialog.tsx hints.ts package.json; do
+    plugin_src="$REPO_ROOT/plugins/model-guide/$plugin_file"
+    plugin_target="$plugin_dest/$plugin_file"
+    if [[ -f "$plugin_src" ]]; then
+      run cp "$plugin_src" "$plugin_target"
+      installed_paths+=("$plugin_target")
+    fi
+  done
+  if [[ "$DRY_RUN" == 1 ]]; then
+    printf '[dry-run] copy  plugin model-guide -> %s\n' "$plugin_dest"
+  else
+    echo "copy  plugin model-guide -> $plugin_dest"
+  fi
 
   write_manifest "$mode" "${installed_paths[@]}"
   echo "installed/refreshed $installed_count managed entrie(s)"
@@ -403,7 +416,7 @@ uninstall_from_manifest() {
   done < <(node -e '
 const fs = require("fs");
 const manifest = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkills || [])]) process.stdout.write(`${p}\0`);
+for (const p of [...(manifest.installedAgents || []), ...(manifest.installedSkills || []), ...(manifest.installedPlugins || [])]) process.stdout.write(`${p}\0`);
 ' "$MANIFEST")
   run rm -f "$MANIFEST"
   echo "uninstalled $removed managed entrie(s)"
