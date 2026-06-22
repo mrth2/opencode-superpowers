@@ -379,6 +379,10 @@ install_all() {
   local plugin_dest="$PLUGINS_DEST/model-guide"
   run mkdir -p "$plugin_dest"
   installed_paths+=("$plugin_dest")
+  # Flat shim so OpenCode's plugin auto-discovery ({plugin,plugins}/*.{ts,js})
+  # finds the plugin; it re-exports the real JSX implementation in the subdir.
+  run cp "$REPO_ROOT/plugins/model-guide.ts" "$PLUGINS_DEST/model-guide.ts"
+  installed_paths+=("$PLUGINS_DEST/model-guide.ts")
   local plugin_file plugin_src plugin_target
   for plugin_file in index.tsx guide-dialog.tsx hints.ts package.json; do
     plugin_src="$REPO_ROOT/plugins/model-guide/$plugin_file"
