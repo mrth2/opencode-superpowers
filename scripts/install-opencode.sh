@@ -27,6 +27,7 @@ SKILLS_SRC="$REPO_ROOT/skills"
 LOCK_FILE="$SKILLS_SRC/superpowers.lock.json"
 AGENTS_DEST="${OPENCODE_AGENTS_DIR:-$HOME/.config/opencode/agents}"
 SKILLS_DEST="${OPENCODE_SKILLS_DIR:-$HOME/.config/opencode/skills}"
+PLUGINS_DEST="${OPENCODE_PLUGINS_DIR:-$HOME/.config/opencode/plugins}"
 MANIFEST="${OPENCODE_SUPERPOWERS_MANIFEST:-$HOME/.config/opencode/opencode-superpowers-install.json}"
 
 FORCE=0
@@ -337,7 +338,7 @@ install_all() {
     exit 10
   fi
 
-  run mkdir -p "$AGENTS_DEST" "$SKILLS_DEST"
+  run mkdir -p "$AGENTS_DEST" "$SKILLS_DEST" "$PLUGINS_DEST"
 
   local installed_paths=()
   while IFS= read -r -d '' src; do
@@ -372,6 +373,13 @@ install_all() {
       skipped_count=$((skipped_count+1))
     fi
   done < <(find "$SKILLS_SRC" -mindepth 1 -maxdepth 1 -type d -print0)
+
+  run mkdir -p "$PLUGINS_DEST/model-guide"
+  run cp "$REPO_ROOT/plugins/model-guide/index.tsx" "$PLUGINS_DEST/model-guide/index.tsx"
+  run cp "$REPO_ROOT/plugins/model-guide/guide-dialog.tsx" "$PLUGINS_DEST/model-guide/guide-dialog.tsx"
+  run cp "$REPO_ROOT/plugins/model-guide/hints.ts" "$PLUGINS_DEST/model-guide/hints.ts"
+  run cp "$REPO_ROOT/plugins/model-guide/package.json" "$PLUGINS_DEST/model-guide/package.json"
+  echo "copy  plugin model-guide -> $PLUGINS_DEST/model-guide"
 
   write_manifest "$mode" "${installed_paths[@]}"
   echo "installed/refreshed $installed_count managed entrie(s)"
