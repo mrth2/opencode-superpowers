@@ -1,7 +1,7 @@
 ---
 name: superpowers-plan-writer-alt2
 description: Writes the implementation plan from an approved spec; second alternative plan-writer variant. The concrete model is set per profile in scripts/install-profiles.json. Invoked by the superpowers primary agent only when the user explicitly requests this alternative for plan writing.
-model: opencode-go/minimax-m3
+model: opencode-go/glm-5.2
 mode: subagent
 hidden: true
 permission:

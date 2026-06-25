@@ -119,7 +119,7 @@ If the user has not specified a model, use the default.
 **Model selection:** The concrete model behind each variant is set per profile in `scripts/install-profiles.json` — update that file, not this list, when swapping models. For the opencode-go profile the variants resolve to:
 - Default: `superpowers-plan-writer` (MiniMax M3)
 - `superpowers-plan-writer-alt1` (DeepSeek V4 Pro): only when explicitly requested
-- `superpowers-plan-writer-alt2` (MiniMax M3): only when explicitly requested
+- `superpowers-plan-writer-alt2` (GLM-5.2): only when explicitly requested
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 

@@ -4,7 +4,7 @@
     "superpowers-spec-writer.md": "opencode-go/glm-5.2",
     "superpowers-plan-writer.md": "opencode-go/minimax-m3",
     "superpowers-plan-writer-alt1.md": "opencode-go/deepseek-v4-pro",
-    "superpowers-plan-writer-alt2.md": "opencode-go/minimax-m3",
+    "superpowers-plan-writer-alt2.md": "opencode-go/glm-5.2",
     "superpowers-implementer.md": "opencode-go/kimi-k2.6",
     "superpowers-code-reviewer.md": "opencode-go/deepseek-v4-pro"
   },
