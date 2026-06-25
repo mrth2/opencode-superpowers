@@ -39,11 +39,11 @@ The installer renders every agent's `model:` field from the selected profile. Wi
 | --- | --- | --- | --- | --- |
 | `superpowers` (main) | `opencode-go/deepseek-v4-flash` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-haiku-4-5` |
 | `superpowers-spec-writer` | `opencode-go/minimax-m3` | `github-copilot/gpt-5.5` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
-| `superpowers-plan-writer` | `opencode-go/qwen3.7-max` | `anthropic/claude-opus-4-7` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
+| `superpowers-plan-writer` | `opencode-go/deepseek-v4-pro` | `anthropic/claude-opus-4-7` | `github-copilot/gpt-5.4` | `anthropic/claude-opus-4-7` |
 | `superpowers-implementer` | `opencode-go/kimi-k2.6` | `github-copilot/claude-sonnet-4.6` | `github-copilot/gpt-5.4-mini` | `anthropic/claude-sonnet-4-6` |
 | `superpowers-code-reviewer` | `opencode-go/deepseek-v4-pro` | `github-copilot/gpt-5.4` | `github-copilot/gpt-5.4-mini` | `github-copilot/gpt-5.4` |
 
-The `opencode-go` profile matches each agent to a model suited to its job: the orchestrator runs on the fast, cheap `deepseek-v4-flash`; spec and plan writing use strong reasoning models (`minimax-m3`, `qwen3.7-max`); implementation uses the long-horizon agentic coder `kimi-k2.6`; and review uses `deepseek-v4-pro` for its coding/bug-finding strength. The two `superpowers-plan-writer` variants map to `opencode-go/deepseek-v4-pro` (`-gpt`) and `opencode-go/minimax-m3` (`-gemini`).
+The `opencode-go` profile matches each agent to a model suited to its job: the orchestrator runs on the fast, cheap `deepseek-v4-flash`; spec writing uses the strong reasoning model `minimax-m3`; plan writing uses `deepseek-v4-pro` for its dedicated reasoning modes and low cost; implementation uses the long-horizon agentic coder `kimi-k2.6`; and review uses `deepseek-v4-pro` for its coding/bug-finding strength. The two `superpowers-plan-writer` variants map to `opencode-go/deepseek-v4-pro` (`-gpt`) and `opencode-go/minimax-m3` (`-gemini`).
 
 The `copilot` profile assumes that delegated subagent calls do not consume Copilot premium-request quota, so it uses top-tier reasoning models (GPT 5.5, Sonnet 4.6) for subagents while keeping the orchestrator on `gpt-5.4-mini`. Use `copilot-lite` if you want to avoid premium-tier model IDs entirely. The matrix lives in `scripts/install-profiles.json` and is easy to fork.
 

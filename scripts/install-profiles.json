@@ -2,7 +2,7 @@
   "opencode-go": {
     "superpowers.md": "opencode-go/deepseek-v4-flash",
     "superpowers-spec-writer.md": "opencode-go/minimax-m3",
-    "superpowers-plan-writer.md": "opencode-go/qwen3.7-max",
+    "superpowers-plan-writer.md": "opencode-go/deepseek-v4-pro",
     "superpowers-plan-writer-gpt.md": "opencode-go/deepseek-v4-pro",
     "superpowers-plan-writer-gemini.md": "opencode-go/minimax-m3",
     "superpowers-implementer.md": "opencode-go/kimi-k2.6",
