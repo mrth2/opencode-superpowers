@@ -1,7 +1,7 @@
 ---
 name: superpowers-plan-writer
 description: Writes the implementation plan from an approved spec. Invoked by the superpowers primary agent after the user confirms the spec.
-model: opencode-go/qwen3.7-max
+model: opencode-go/minimax-m3
 mode: subagent
 hidden: true
 permission:

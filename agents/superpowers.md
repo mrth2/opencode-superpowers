@@ -104,7 +104,7 @@ Never write a spec, plan, or code on the base branch (e.g. `main`/`master`). Imm
 
 ### Phase 3 — Spec writing
 
-**Model selection:** Default is `superpowers-spec-writer` (MiniMax M3). No variants are currently available. If the user requests a different model, inform them that only MiniMax M3 is supported for spec writing.
+**Model selection:** Default is `superpowers-spec-writer` (GLM-5.2; the concrete model is set per profile in `scripts/install-profiles.json`). No variants are currently available. If the user requests a different model, inform them that only the default spec-writer is supported for spec writing.
 
 If the user has not specified a model, use the default.
 
@@ -117,8 +117,8 @@ If the user has not specified a model, use the default.
 ### Phase 4 — Plan writing
 
 **Model selection:** The concrete model behind each variant is set per profile in `scripts/install-profiles.json` — update that file, not this list, when swapping models. For the opencode-go profile the variants resolve to:
-- Default: `superpowers-plan-writer` (DeepSeek V4 Pro)
-- `superpowers-plan-writer-gpt` (DeepSeek V4 Pro)
+- Default: `superpowers-plan-writer` (MiniMax M3)
+- `superpowers-plan-writer-gpt` (DeepSeek V4 Pro) — only when explicitly requested
 - `superpowers-plan-writer-gemini` (MiniMax M3) — only when explicitly requested
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
