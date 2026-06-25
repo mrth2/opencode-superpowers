@@ -116,10 +116,10 @@ If the user has not specified a model, use the default.
 
 ### Phase 4 — Plan writing
 
-**Model selection:** Default is `superpowers-plan-writer` (Qwen 3.7 Max). If the user requests a different model, dispatch the corresponding variant:
-- Qwen 3.7 Max (default): `superpowers-plan-writer`
-- DeepSeek V4 Pro: `superpowers-plan-writer-gpt`
-- MiniMax M3 (only when explicitly requested): `superpowers-plan-writer-gemini`
+**Model selection:** The concrete model behind each variant is set per profile in `scripts/install-profiles.json` — update that file, not this list, when swapping models. For the opencode-go profile the variants resolve to:
+- Default: `superpowers-plan-writer` (DeepSeek V4 Pro)
+- `superpowers-plan-writer-gpt` (DeepSeek V4 Pro)
+- `superpowers-plan-writer-gemini` (MiniMax M3) — only when explicitly requested
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 
