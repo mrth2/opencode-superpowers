@@ -3,8 +3,8 @@
     "superpowers.md": "opencode-go/deepseek-v4-flash",
     "superpowers-spec-writer.md": "opencode-go/glm-5.2",
     "superpowers-plan-writer.md": "opencode-go/minimax-m3",
-    "superpowers-plan-writer-gpt.md": "opencode-go/deepseek-v4-pro",
-    "superpowers-plan-writer-gemini.md": "opencode-go/minimax-m3",
+    "superpowers-plan-writer-alt1.md": "opencode-go/deepseek-v4-pro",
+    "superpowers-plan-writer-alt2.md": "opencode-go/minimax-m3",
     "superpowers-implementer.md": "opencode-go/kimi-k2.6",
     "superpowers-code-reviewer.md": "opencode-go/deepseek-v4-pro"
   },
@@ -12,8 +12,8 @@
     "superpowers.md": "github-copilot/gpt-5.4-mini",
     "superpowers-spec-writer.md": "github-copilot/gpt-5.5",
     "superpowers-plan-writer.md": "anthropic/claude-opus-4-7",
-    "superpowers-plan-writer-gpt.md": "github-copilot/gpt-5.5",
-    "superpowers-plan-writer-gemini.md": "github-copilot/gemini-3.1-pro-preview",
+    "superpowers-plan-writer-alt1.md": "github-copilot/gpt-5.5",
+    "superpowers-plan-writer-alt2.md": "github-copilot/gemini-3.1-pro-preview",
     "superpowers-implementer.md": "github-copilot/claude-sonnet-4.6",
     "superpowers-code-reviewer.md": "github-copilot/gpt-5.4"
   },
@@ -21,8 +21,8 @@
     "superpowers.md": "github-copilot/gpt-5.4-mini",
     "superpowers-spec-writer.md": "github-copilot/gpt-5.4-mini",
     "superpowers-plan-writer.md": "github-copilot/gpt-5.4",
-    "superpowers-plan-writer-gpt.md": "github-copilot/gpt-5.4",
-    "superpowers-plan-writer-gemini.md": "github-copilot/gemini-3.1-pro-preview",
+    "superpowers-plan-writer-alt1.md": "github-copilot/gpt-5.4",
+    "superpowers-plan-writer-alt2.md": "github-copilot/gemini-3.1-pro-preview",
     "superpowers-implementer.md": "github-copilot/gpt-5.4-mini",
     "superpowers-code-reviewer.md": "github-copilot/gpt-5.4-mini"
   },
@@ -30,8 +30,8 @@
     "superpowers.md": "anthropic/claude-haiku-4-5",
     "superpowers-spec-writer.md": "anthropic/claude-sonnet-4-6",
     "superpowers-plan-writer.md": "anthropic/claude-opus-4-7",
-    "superpowers-plan-writer-gpt.md": "anthropic/claude-opus-4-7",
-    "superpowers-plan-writer-gemini.md": "google/gemini-3.1-pro-preview",
+    "superpowers-plan-writer-alt1.md": "anthropic/claude-opus-4-7",
+    "superpowers-plan-writer-alt2.md": "google/gemini-3.1-pro-preview",
     "superpowers-implementer.md": "anthropic/claude-sonnet-4-6",
     "superpowers-code-reviewer.md": "github-copilot/gpt-5.4"
   }

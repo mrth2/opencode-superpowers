@@ -31,8 +31,8 @@ permission:
     "*": deny
     "superpowers-spec-writer": allow
     "superpowers-plan-writer": allow
-    "superpowers-plan-writer-gpt": allow
-    "superpowers-plan-writer-gemini": allow
+    "superpowers-plan-writer-alt1": allow
+    "superpowers-plan-writer-alt2": allow
     "superpowers-implementer": allow
     "superpowers-code-reviewer": allow
 ---
@@ -118,8 +118,8 @@ If the user has not specified a model, use the default.
 
 **Model selection:** The concrete model behind each variant is set per profile in `scripts/install-profiles.json` — update that file, not this list, when swapping models. For the opencode-go profile the variants resolve to:
 - Default: `superpowers-plan-writer` (MiniMax M3)
-- `superpowers-plan-writer-gpt` (DeepSeek V4 Pro) — only when explicitly requested
-- `superpowers-plan-writer-gemini` (MiniMax M3) — only when explicitly requested
+- `superpowers-plan-writer-alt1` (DeepSeek V4 Pro): only when explicitly requested
+- `superpowers-plan-writer-alt2` (MiniMax M3): only when explicitly requested
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 

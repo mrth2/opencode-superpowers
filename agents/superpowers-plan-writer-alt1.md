@@ -1,7 +1,7 @@
 ---
-name: superpowers-plan-writer-gemini
-description: Writes the implementation plan from an approved spec using MiniMax M3 via OpenCode Go. Invoked by the superpowers primary agent only when the user explicitly requests the MiniMax variant for plan writing.
-model: opencode-go/minimax-m3
+name: superpowers-plan-writer-alt1
+description: Writes the implementation plan from an approved spec; first alternative plan-writer variant. The concrete model is set per profile in scripts/install-profiles.json. Invoked by the superpowers primary agent only when the user explicitly requests this alternative for plan writing.
+model: opencode-go/deepseek-v4-pro
 mode: subagent
 hidden: true
 permission:
