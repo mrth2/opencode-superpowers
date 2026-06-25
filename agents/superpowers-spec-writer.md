@@ -1,7 +1,7 @@
 ---
 name: superpowers-spec-writer
 description: Writes the design spec document from an approved brainstorm. Invoked by the superpowers primary agent after design is approved.
-model: opencode-go/minimax-m3
+model: opencode-go/glm-5.2
 mode: subagent
 hidden: true
 permission:

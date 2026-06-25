@@ -151,10 +151,10 @@ test("opencode-go profile uses the opencode-go provider on every agent", () => {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 
   assert.equal(readModel(agentsDir, "superpowers.md"), "opencode-go/deepseek-v4-flash");
-  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "opencode-go/minimax-m3");
-  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "opencode-go/qwen3.7-max");
-  assert.equal(readModel(agentsDir, "superpowers-plan-writer-gpt.md"), "opencode-go/deepseek-v4-pro");
-  assert.equal(readModel(agentsDir, "superpowers-plan-writer-gemini.md"), "opencode-go/minimax-m3");
+  assert.equal(readModel(agentsDir, "superpowers-spec-writer.md"), "opencode-go/glm-5.2");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer.md"), "opencode-go/minimax-m3");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer-alt1.md"), "opencode-go/deepseek-v4-pro");
+  assert.equal(readModel(agentsDir, "superpowers-plan-writer-alt2.md"), "opencode-go/glm-5.2");
   assert.equal(readModel(agentsDir, "superpowers-implementer.md"), "opencode-go/kimi-k2.6");
   assert.equal(readModel(agentsDir, "superpowers-code-reviewer.md"), "opencode-go/deepseek-v4-pro");
 });

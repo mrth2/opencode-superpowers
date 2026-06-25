@@ -31,8 +31,8 @@ permission:
     "*": deny
     "superpowers-spec-writer": allow
     "superpowers-plan-writer": allow
-    "superpowers-plan-writer-gpt": allow
-    "superpowers-plan-writer-gemini": allow
+    "superpowers-plan-writer-alt1": allow
+    "superpowers-plan-writer-alt2": allow
     "superpowers-implementer": allow
     "superpowers-code-reviewer": allow
 ---
@@ -104,7 +104,7 @@ Never write a spec, plan, or code on the base branch (e.g. `main`/`master`). Imm
 
 ### Phase 3 — Spec writing
 
-**Model selection:** Default is `superpowers-spec-writer` (MiniMax M3). No variants are currently available. If the user requests a different model, inform them that only MiniMax M3 is supported for spec writing.
+**Model selection:** Default is `superpowers-spec-writer` (GLM-5.2; the concrete model is set per profile in `scripts/install-profiles.json`). No variants are currently available. If the user requests a different model, inform them that only the default spec-writer is supported for spec writing.
 
 If the user has not specified a model, use the default.
 
@@ -116,10 +116,10 @@ If the user has not specified a model, use the default.
 
 ### Phase 4 — Plan writing
 
-**Model selection:** Default is `superpowers-plan-writer` (Qwen 3.7 Max). If the user requests a different model, dispatch the corresponding variant:
-- Qwen 3.7 Max (default): `superpowers-plan-writer`
-- DeepSeek V4 Pro: `superpowers-plan-writer-gpt`
-- MiniMax M3 (only when explicitly requested): `superpowers-plan-writer-gemini`
+**Model selection:** The concrete model behind each variant is set per profile in `scripts/install-profiles.json` — update that file, not this list, when swapping models. For the opencode-go profile the variants resolve to:
+- Default: `superpowers-plan-writer` (MiniMax M3)
+- `superpowers-plan-writer-alt1` (DeepSeek V4 Pro): only when explicitly requested
+- `superpowers-plan-writer-alt2` (GLM-5.2): only when explicitly requested
 
 If the user has not specified a model, use the default. Only switch if the user explicitly requests it.
 
